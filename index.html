@@ -160,6 +160,19 @@ textarea.stratbox{margin-top:0;font-size:13px;line-height:1.5}
 .pjob small{color:var(--faint)}
 .pjob .mi{width:20px;height:20px;font-size:12px}
 @media (max-width:520px){.pboss{grid-template-columns:1fr;gap:4px}}
+.mapwrap{margin-top:14px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#0a090c}
+.maphd{display:flex;align-items:center;gap:8px;padding:7px 10px;background:#14171d;border-bottom:1px solid var(--line)}
+.maphd>span:first-child{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.mapframe{display:block;width:100%;height:clamp(300px,52vh,560px);border:0;background:#0a090c}
+.fullmap{border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.fullmap .mapframe{height:calc(100vh - 150px);min-height:480px}
+details.mech{margin-top:12px;background:#14171d;border:1px solid var(--line);border-radius:8px;padding:6px 10px}
+details.mech summary{cursor:pointer;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);padding:3px 0}
+details.mech .strat{margin-top:6px}
+#mapov{position:fixed;inset:0;z-index:300;background:#000}
+#mapov iframe{width:100%;height:100%;border:0;display:block}
+body.ovopen{overflow:hidden}
+@media (max-width:560px){.maphd .hint{display:none}}
 textarea.free{width:100%;margin-top:10px;min-height:54px;background:#14171d;border:1px solid var(--line);border-radius:8px;padding:8px 10px;resize:vertical}
 .bossnav{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
 .bossnav button{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:12px;font-weight:600;color:var(--muted)}
@@ -317,12 +330,12 @@ function defaults(){
     core:{MT:'Methl',OT1:'Dellz',OT2:'Xanthori',MTH1:'Cassyiskewl',MTH2:'Tyrivandril',MTH3:'Lavona',OT1H:'Nocktus',OT2H:'Whoville',RH1:'Dauerscalf',RH2:'Eko'},
     mk:{Moon:'',Triangle:'',Diamond:'',Circle:'',Star:''},
     groups: DATA.groups.map(g=>g.slice()),
-    a:{}, m:{}, notes:{}, lb:{}, cx:{}, hide:{}, cn:0, ord:{}, st:{}, ro:{}, mkw:{}, tabs:{order:[],hidden:[]}
+    a:{}, m:{}, notes:{}, lb:{}, cx:{}, hide:{}, cn:0, ord:{}, st:{}, ro:{}, mkw:{}, board:null, bassets:{}, tabs:{order:[],hidden:[]}
   };
 }
 
 let S = defaults();
-const UI = {tab:'BWL', q:'', collapsed:new Set(), sel:null, bossEdit:null, editStrat:null, who:''};
+const UI = {tab:'BWL', q:'', collapsed:new Set(), sel:null, bossEdit:null, editStrat:null, who:'', mech:new Set()};
 
 /* ---------- state helpers ---------- */
 const player = n => S.roster.find(p=>p.n===n);
@@ -410,7 +423,7 @@ function place(name, from, to){
 function packState(){
   return {v:1,d:S.date,l:S.lead,
     r:S.roster.map(p=>p.x&&p.x.length?[p.n,p.c,p.r,p.st,p.out?1:0,p.x]:[p.n,p.c,p.r,p.st,p.out?1:0]),
-    c:S.core,k:S.mk,g:S.groups,a:S.a,m:S.m,n:S.notes,b:S.lb,x:S.cx,h:S.hide,cn:S.cn,o:S.ord,t:S.st,ro:S.ro,tb:S.tabs,w:S.mkw};
+    c:S.core,k:S.mk,g:S.groups,a:S.a,m:S.m,n:S.notes,b:S.lb,x:S.cx,h:S.hide,cn:S.cn,o:S.ord,t:S.st,ro:S.ro,tb:S.tabs,w:S.mkw,bd:S.board};
 }
 function unpackState(o){
   const s=defaults();
@@ -420,7 +433,7 @@ function unpackState(o){
   if (o.c) Object.assign(s.core,o.c);
   if (o.k) Object.assign(s.mk,o.k);
   if (Array.isArray(o.g)&&o.g.length===8) s.groups=o.g.map(g=>{g=(g||[]).slice(0,5); while(g.length<5) g.push(''); return g;});
-  s.a=o.a||{}; s.m=o.m||{}; s.n=undefined; s.notes=o.n||{}; s.lb=o.b||{}; s.cx=o.x||{}; s.hide=o.h||{}; s.cn=o.cn||0; s.ord=o.o||{}; s.st=o.t||{}; s.ro=o.ro||{}; s.mkw=o.w||{}; if (o.tb&&Array.isArray(o.tb.order)) s.tabs={order:o.tb.order,hidden:o.tb.hidden||[]};
+  s.a=o.a||{}; s.m=o.m||{}; s.n=undefined; s.notes=o.n||{}; s.lb=o.b||{}; s.cx=o.x||{}; s.hide=o.h||{}; s.cn=o.cn||0; s.ord=o.o||{}; s.st=o.t||{}; s.ro=o.ro||{}; s.mkw=o.w||{}; s.board=Array.isArray(o.bd)?o.bd:null; if (o.tb&&Array.isArray(o.tb.order)) s.tabs={order:o.tb.order,hidden:o.tb.hidden||[]};
   return s;
 }
 const b64u = {
@@ -451,6 +464,7 @@ function commit(){
   saveTimer=setTimeout(saveLocal,250);
 }
 function saveLocal(){
+  try { localStorage.setItem(STORE+'-maps', JSON.stringify(S.bassets||{})); } catch(e){}
   try { localStorage.setItem(STORE, JSON.stringify(packState())); setSaved('Saved in this browser'); }
   catch(e){ setSaved('Not saved (browser storage blocked). Use Copy share link.'); }
 }
@@ -458,18 +472,21 @@ function setSaved(t){ document.getElementById('saved').textContent=t; }
 async function load(){
   const h = location.hash.match(/[#&]p=([^&]+)/);
   if (h){
-    try { S = unpackState(await decodeState(h[1])); setSaved('Loaded from share link');
+    try { S = unpackState(await decodeState(h[1])); loadMapAssets(); setSaved('Loaded from share link');
       const w=location.hash.match(/[#&]who=([^&]+)/); if (w){ UI.who=decodeURIComponent(w[1]); UI.tab='player'; S.tabs.hidden=S.tabs.hidden.filter(x=>x!=='player'); } else saveLocal();
       return; }
     catch(e){ toast("That share link couldn't be read, so the saved plan is shown instead."); }
   }
   try { const raw=localStorage.getItem(STORE); if (raw){ S=unpackState(JSON.parse(raw)); setSaved('Saved in this browser'); } } catch(e){}
+  loadMapAssets();
 }
+function loadMapAssets(){ try { S.bassets=JSON.parse(localStorage.getItem(STORE+'-maps')||'{}')||{}; } catch(e){ S.bassets={}; } }
 async function share(){
   const code = await encodeState();
   const url = location.origin+location.pathname+'#p='+code;
   history.replaceState(null,'',url);
-  try { await navigator.clipboard.writeText(url); toast('Share link copied. Anyone who opens it sees this exact plan.'); }
+  const up = Object.keys(S.bassets||{}).length ? ' Note: images you uploaded onto maps stay in this browser only.' : '';
+  try { await navigator.clipboard.writeText(url); toast('Share link copied. Anyone who opens it sees this exact plan.'+up); }
   catch(e){ prompt('Copy this link:',url); }
 }
 
@@ -535,7 +552,7 @@ function renderBench(){
   document.getElementById('legend').innerHTML = Object.entries(CLASSES).map(([k,c])=>`<span><i style="background:${c}"></i>${k}</span>`).join('');
 }
 
-const TABS={BWL:'BWL bosses',AQ40:'AQ40 bosses',BUFF:'Buffs',setup:'Tanks, healers & marks',groups:'Raid groups',player:'Player',roster:'Roster & bosses'};
+const TABS={BWL:'BWL bosses',AQ40:'AQ40 bosses',BUFF:'Buffs',setup:'Tanks, healers & marks',groups:'Raid groups',maps:'Strategy maps',player:'Player',roster:'Roster & bosses'};
 function tabOrder(){
   const o=(S.tabs.order||[]).filter(k=>k in TABS);
   Object.keys(TABS).forEach(k=>{ if (!o.includes(k)) o.push(k); });
@@ -569,6 +586,14 @@ function hiddenList(){
   return h;
 }
 
+function mapHTML(raid,bi,name){
+  return `<div class="mapwrap"><div class="maphd"><span>Strategy map</span><span class="hint" style="margin:0;flex:1">Drag to pan · Ctrl + scroll to zoom</span>
+    <button class="btn small primary" data-editmap="${esc(name)}">✎ Edit map</button><button class="btn small" data-tab="maps">Full board</button></div>
+    <iframe class="mapframe" loading="lazy" title="${esc(name)} map" data-boss="${esc(name)}" src="board.html?boss=${encodeURIComponent(name)}"></iframe></div>`;
+}
+function renderMaps(){
+  return `<div class="fullmap"><iframe id="fullmap" class="mapframe" title="Strategy maps" src="board.html?full=1"></iframe></div>`;
+}
 function renderRaid(raid){
   const bosses = DATA[raid], order = bossOrder(raid);
   let html = `<div class="bossnav">${order.map((i,pos)=>`<button data-jump="${raid}-${i}">${raid==='BUFF'?'':(pos+1)+'. '}${esc(bosses[i].name.replace(/ \(.*\)$/,''))}</button>`).join('')}
@@ -599,8 +624,9 @@ function renderRaid(raid){
         <button class="btn small" data-copy="${raid}|${bi}" title="Copy assignments as text for raid chat or Discord">Copy text</button>
         ${Object.keys(S.hide).some(k=>k.startsWith(raid+'.'+bi+'.'))?`<button class="btn small ghost" data-restore="${raid}.${bi}">Restore rows</button>`:''}
         <button class="btn small ghost" data-clearboss="${raid}|${bi}" title="Clear this boss back to defaults">Clear</button></div>
-      <div class="bd">${sitHTML}<div class="secs">${secs}</div>${notes}
-        <textarea class="free" data-note="${raid}.${bi}" placeholder="${raid==='BUFF'?'Notes for this week…':'Notes for this week (breaths, kill order, positions…)'}">${esc(S.notes[raid+'.'+bi]||'')}</textarea></div>
+      <div class="bd"><div class="ctop">${sitHTML}<div class="secs">${secs}</div></div>${raid==='BUFF'?'':mapHTML(raid,bi,b.name)}
+        <div class="cbot">${raid==='BUFF'?notes:`<details class="mech" data-mech="${sid}"${UI.editStrat===sid||UI.mech.has(sid)?' open':''}><summary>Mechanics notes</summary>${notes}</details>`}
+        <textarea class="free" data-note="${raid}.${bi}" placeholder="${raid==='BUFF'?'Notes for this week…':'Notes for this week (breaths, kill order, positions…)'}">${esc(S.notes[raid+'.'+bi]||'')}</textarea></div></div>
     </section>`;
   });
   return html;
@@ -724,10 +750,23 @@ function renderRoster(){
     <div class="tablewrap"><table class="rt"><thead><tr><th></th><th>Name</th><th>Class</th><th>Role</th><th>Status</th><th>Attending</th><th>Bosses</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div></section>`;
 }
 
+// re-render a boss tab without reloading the map frames inside it
+function patchRaid(m,html){
+  const t=document.createElement('div'); t.innerHTML=html;
+  const oc=[...m.querySelectorAll(':scope > section.card')], nc=[...t.querySelectorAll(':scope > section.card')];
+  if (oc.length!==nc.length || oc.some((c,i)=>c.id!==nc[i].id)) return false;
+  m.querySelector(':scope > .bossnav').replaceWith(t.querySelector(':scope > .bossnav'));
+  oc.forEach((c,i)=>{ const n=nc[i]; c.className=n.className;
+    ['.hd','.ctop','.cbot'].forEach(sel=>{ const a=c.querySelector(sel), b=n.querySelector(sel); if (a&&b) a.replaceWith(b); }); });
+  return true;
+}
 function render(){
   renderTabs(); renderBench();
   const m=document.getElementById('main');
-  if (isRaidTab(UI.tab)) m.innerHTML=renderRaid(UI.tab);
+  const same = m.dataset.view===UI.tab;
+  m.dataset.view=UI.tab;
+  if (isRaidTab(UI.tab)){ const html=renderRaid(UI.tab); if (!(same && patchRaid(m,html))) m.innerHTML=html; }
+  else if (UI.tab==='maps'){ if (!same) m.innerHTML=renderMaps(); }
   else if (UI.tab==='setup') m.innerHTML=renderSetup();
   else if (UI.tab==='groups') m.innerHTML=renderGroups();
   else if (UI.tab==='player') m.innerHTML=renderPlayer();
@@ -903,7 +942,7 @@ document.addEventListener('click',e=>{
     navigator.clipboard.writeText(t).then(()=>toast('Copied. Marks show as icons in WoW chat.'),()=>prompt('Copy:',t)); return; }
   const pl=el.closest('[data-plink]'); if (pl){ shareFor(pl.dataset.plink); return; }
   const pt=el.closest('[data-ptext]'); if (pt){ const t=playerText(pt.dataset.ptext); navigator.clipboard.writeText(t).then(()=>toast('Copied.'),()=>prompt('Copy:',t)); return; }
-  const tab=el.closest('[data-tab]'); if (tab){ UI.tab=tab.dataset.tab; render(); window.scrollTo(0,0); return; }
+  const tab=el.closest('[data-tab]'); if (tab){ UI.tab=tab.dataset.tab; if (S.tabs.hidden.includes(UI.tab)) S.tabs.hidden=S.tabs.hidden.filter(x=>x!==UI.tab); render(); window.scrollTo(0,0); return; }
   const clr=el.closest('[data-clear]'); if (clr){ const [t,k]=clr.dataset.clear.split('|'); setVal({t,k},''); commit(); return; }
   const rs=el.closest('[data-reset]'); if (rs){ delete S.a[rs.dataset.reset]; commit(); return; }
   const tg=el.closest('[data-toggle]'); if (tg){ const id=tg.dataset.toggle; UI.collapsed.has(id)?UI.collapsed.delete(id):UI.collapsed.add(id); render(); return; }
@@ -922,6 +961,7 @@ document.addEventListener('click',e=>{
     delete S.a[key]; delete S.m[key]; delete S.lb[key]; commit();
     toast('Row removed. "Restore rows" on the boss brings back the built-in ones.'); return; }
   const rr=el.closest('[data-restore]'); if (rr){ const p=rr.dataset.restore+'.'; Object.keys(S.hide).forEach(k=>{ if(k.startsWith(p)) delete S.hide[k]; }); commit(); return; }
+  const em=el.closest('[data-editmap]'); if (em){ const fr=em.closest('.mapwrap').querySelector('iframe'); openMapEditor(em.dataset.editmap, null, false); return; }
   const mv=el.closest('[data-move]'); if (mv){ const [r,b,d]=mv.dataset.move.split('|'); const o=bossOrder(r); const i=o.indexOf(+b), j=i+(+d);
     if (j<0||j>=o.length) return; [o[i],o[j]]=[o[j],o[i]]; S.ord[r]=o; commit(); document.getElementById(r+'-'+b).scrollIntoView({block:'nearest'}); return; }
   const se=el.closest('[data-stratedit]'); if (se){ UI.editStrat=se.dataset.stratedit; render(); const t=document.querySelector(`[data-strat="${UI.editStrat}"]`); if (t) t.focus(); return; }
@@ -938,7 +978,7 @@ document.addEventListener('click',e=>{
     commit(); if (un.length) toast(`No room for ${un.length} more.`); return; }
   if (el.closest('#b-cleargroups')){ if (confirm('Empty all 8 groups?')){ S.groups=S.groups.map(g=>g.map(()=>'')); commit(); } return; }
   if (el.closest('#b-share')){ share(); return; }
-  if (el.closest('#b-reset')){ if (confirm('Reset everything to the starting roster and assignments? Your current plan in this browser will be replaced.')){ S=defaults(); history.replaceState(null,'',location.pathname); commit(); toast('Reset to the starting plan.'); } return; }
+  if (el.closest('#b-reset')){ if (confirm('Reset everything to the starting roster and assignments? Your current plan in this browser will be replaced.')){ S=defaults(); history.replaceState(null,'',location.pathname); commit(); mapFrames().forEach(f=>sendLoad(f.contentWindow)); toast('Reset to the starting plan.'); } return; }
   if (el.closest('#b-addtoggle')){ const f=document.getElementById('addform'); f.hidden=!f.hidden; if (!f.hidden) document.getElementById('add-n').focus(); return; }
   if (el.closest('#selcancel')){ UI.sel=null; render(); return; }
   // tap-to-place: a name is selected and an empty slot (or the roster panel) is tapped
@@ -992,6 +1032,32 @@ document.getElementById('addform').addEventListener('submit',e=>{
   inp.value=''; commit(); toast(`Added ${n}. Drag them onto any slot.`); inp.focus();
 });
 window.addEventListener('scroll',closeMenu,{passive:true});
+/* ---------- strategy map frames (board.html) ---------- */
+let OV=null;
+const mapFrames = () => [...document.querySelectorAll('iframe.mapframe, #mapov iframe')];
+function sendLoad(win,extra={}){ try { win.postMessage(Object.assign({ab:1,type:'load',pages:S.board,assets:S.bassets},extra),'*'); } catch(e){} }
+function openMapEditor(boss,page,create){
+  closeMapEditor();
+  OV={page};
+  const d=document.createElement('div'); d.id='mapov';
+  d.innerHTML=`<iframe title="Map editor" src="board.html?edit=1${boss?'&boss='+encodeURIComponent(boss):''}${create?'&create=1':''}"></iframe>`;
+  document.body.appendChild(d); document.body.classList.add('ovopen');
+}
+function closeMapEditor(){ const d=document.getElementById('mapov'); if (d) d.remove(); document.body.classList.remove('ovopen'); OV=null; }
+window.addEventListener('message',e=>{
+  const m=e.data; if (!m||!m.ab) return;
+  const fr=mapFrames().find(f=>f.contentWindow===e.source); if (!fr) return;
+  if (m.type==='ready'){ sendLoad(e.source, fr.closest('#mapov')&&OV&&OV.page!=null?{page:OV.page}:{}); return; }
+  if (m.type==='save'){
+    S.board=m.pages; S.bassets=m.assets||{};
+    clearTimeout(saveTimer); saveTimer=setTimeout(saveLocal,300);
+    mapFrames().forEach(f=>{ if (f.contentWindow!==e.source) sendLoad(f.contentWindow); });
+    return;
+  }
+  if (m.type==='edit'){ const boss=fr.dataset.boss||''; openMapEditor(boss, m.page, !!m.create); return; }
+  if (m.type==='close'){ closeMapEditor(); mapFrames().forEach(f=>sendLoad(f.contentWindow)); return; }
+});
+document.addEventListener('toggle',e=>{ const d=e.target; if (d.dataset&&d.dataset.mech){ d.open?UI.mech.add(d.dataset.mech):UI.mech.delete(d.dataset.mech); } },true);
 window.addEventListener('hashchange',async()=>{ await load(); render(); });
 
 load().then(render);
