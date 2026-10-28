@@ -2275,6 +2275,8 @@ boot();
   // in a boss card the mouse wheel scrolls the page; hold Ctrl to zoom the map
   if (card) window.addEventListener('wheel', e => { if (!e.ctrlKey) e.stopImmediatePropagation(); }, { capture: true });
   $('#bDone').onclick = () => { if (editingId) commitEditor(); if (dirty || saveT) flush(); if (WANT_EDIT) send({ type: 'close' }); else setMode('view'); };
+  // ?ro=1 (planner opened from a view-only link): no way into the editor
+  if (Q.get('ro') === '1') { const st = document.createElement('style'); st.textContent = '#bEdit,.edit-only{display:none!important}'; document.head.appendChild(st); setMode = (orig => m => orig('view'))(setMode); }
   $('#bEdit').onclick = () => { if (FULL) setMode('edit'); else send({ type: 'edit', page: project.active }); };
 
   function showEmpty() {

@@ -204,7 +204,7 @@ textarea.free{width:100%;margin-top:10px;min-height:54px;background:#14171d;bord
 .mkw:hover,.mkw:focus{border-color:var(--line2);background:#14171d;outline:none;color:var(--text)}
 @media (max-width:700px){.mkgrid{grid-template-columns:1fr 1fr}.mkgrid .mname{grid-column:1/-1}.mkhead{display:none}}
 .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}
-.mrow{display:grid;grid-template-columns:120px minmax(120px,1fr);gap:8px;align-items:center;margin-bottom:6px}
+.mrow{display:grid;grid-template-columns:minmax(110px,150px) minmax(120px,1fr) 26px;gap:8px;align-items:center;margin-bottom:6px}
 .mname{display:flex;align-items:center;gap:8px;font-weight:600}
 .mname small{display:block;font-weight:400;font-size:11px;color:var(--faint)}
 .mi{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;font-size:14px;flex:none;background:#14171d;border:1px solid var(--line2)}
@@ -244,6 +244,19 @@ table.rt{width:100%;border-collapse:collapse;font-size:13px}
   .secs{grid-template-columns:1fr}
   .row{grid-template-columns:14px minmax(76px,1fr) minmax(110px,1.3fr) 40px 18px}
 }
+/* per-raid lineup */
+.lrpick{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 12px}
+.mrow input.mlb{font-weight:600}
+.mrow .addrow,.card .addrow{margin-top:6px}
+/* view-only links */
+.vobanner{display:none;align-items:center;gap:8px;padding:7px 12px;margin:12px 20px 0;border-radius:8px;border:1px solid var(--line2);background:#1f242e;color:var(--muted);font-size:13px}
+body.viewonly .vobanner{display:flex}
+body.viewonly :is(#b-reset,#b-add,#b-addtoggle,#addform,#b-autogroup,#b-cleargroups,[data-clear],[data-reset],[data-clearboss],[data-addslot],[data-addcrow],[data-restore],[data-editmap],[data-move],[data-stratedit],[data-stratreset],[data-bossedit],[data-bxall],[data-del],[data-tabmenu]){display:none!important}
+body.viewonly :is(.grip,[data-rmslot],[data-rmcrow]){visibility:hidden;pointer-events:none}
+body.viewonly .chip{cursor:default}
+body.viewonly .edhint{display:none}
+body.viewonly :is(input,select,textarea):disabled{opacity:1;color:var(--text);cursor:default}
+.ctx .sub{display:block;color:var(--muted);font-size:11.5px;margin-top:2px}
 </style>
 </head>
 <body>
@@ -257,15 +270,16 @@ table.rt{width:100%;border-collapse:collapse;font-size:13px}
     <div class="spacer"></div>
     <span class="saved" id="saved"></span>
     <button class="btn" id="b-reset" title="Go back to the starting roster and assignments">Reset</button>
-    <button class="btn primary" id="b-share">Copy share link</button>
+    <button class="btn primary" id="b-share">Share ▾</button>
   </div>
   <nav class="tabs" id="tabs"></nav>
 </header>
 
+<div class="vobanner" id="vobanner">👁 View only. You can look around and copy assignments, but changes are turned off on this link.</div>
 <div class="wrap">
   <aside id="bench">
     <div class="rhead"><h3>Roster</h3><span class="cnt" id="rcount"></span><button class="btn small" id="b-addtoggle" type="button">+ Add</button></div>
-    <p class="hint">Drag a name onto a slot, or tap it then tap a slot. Drag back here to clear. Double-click a name for their page.</p>
+    <p class="hint edhint">Drag a name onto a slot, or tap it then tap a slot. Drag back here to clear. Double-click a name for their page.</p>
     <form class="addform" id="addform" autocomplete="off" hidden>
       <input id="add-n" placeholder="New member name" maxlength="24">
       <div class="addrow"><select id="add-c"></select><select id="add-r"></select><button class="btn small primary" type="submit">Add member</button></div>
@@ -340,19 +354,27 @@ const isRaidTab = t => t==='BWL'||t==='AQ40'||t==='BUFF';
 RAIDS.BUFF = {name:'Buffs',c:'#1d3a4f'};
 const STORE = 'ashen-raid-planner-v1';
 
+// each raid keeps its own tanks/healers lineup, pull marks and mark meanings
+function defLineup(){
+  return {rows:CORE.map(r=>r.slice()), core:{MT:'Methl',OT1:'Dellz',OT2:'Xanthori',MTH1:'Cassyiskewl',MTH2:'Tyrivandril',MTH3:'Lavona',OT1H:'Nocktus',OT2H:'Whoville',RH1:'Dauerscalf',RH2:'Eko'}, mk:{}, mkw:{}};
+}
+const LRAIDS = ['BWL','AQ40'];
+const lineup = raid => S.L[raid==='AQ40'?'AQ40':'BWL'];
+// drop-target keys for the lineup carry their raid: "BWL/MT", "AQ40/pull:Skull"
+const lsplit = k => { const i=k.indexOf('/'); return [k.slice(0,i), k.slice(i+1)]; };
 function defaults(){
   return {
     v:1, date:'', lead:'',
     roster: DATA.roster.map(r=>({n:r[0],c:r[1],r:r[2],st:r[3],out:!!r[4],x:[]})),
-    core:{MT:'Methl',OT1:'Dellz',OT2:'Xanthori',MTH1:'Cassyiskewl',MTH2:'Tyrivandril',MTH3:'Lavona',OT1H:'Nocktus',OT2H:'Whoville',RH1:'Dauerscalf',RH2:'Eko'},
-    mk:{Moon:'',Triangle:'',Diamond:'',Circle:'',Star:''},
+    L:{BWL:defLineup(), AQ40:defLineup()},
     groups: DATA.groups.map(g=>g.slice()),
-    a:{}, m:{}, notes:{}, lb:{}, cx:{}, hide:{}, cn:0, ord:{}, st:{}, ro:{}, mkw:{}, board:null, bassets:{}, tabs:{order:[],hidden:[]}
+    a:{}, m:{}, notes:{}, lb:{}, cx:{}, hide:{}, cn:0, ord:{}, st:{}, ro:{}, board:null, bassets:{}, tabs:{order:[],hidden:[]}
   };
 }
 
 let S = defaults();
-const UI = {tab:'BWL', q:'', collapsed:new Set(), sel:null, bossEdit:null, editStrat:null, who:'', mech:new Set()};
+let VIEW = false; // opened from a view-only link (#...&view=1)
+const UI = {lr:'BWL', tab:'BWL', q:'', collapsed:new Set(), sel:null, bossEdit:null, editStrat:null, who:'', mech:new Set()};
 
 /* ---------- state helpers ---------- */
 const player = n => S.roster.find(p=>p.n===n);
@@ -380,16 +402,15 @@ function bossSlots(raid,b){ return bossSecs(raid,b).flatMap(sec=>sec.slots); }
 const slotLabel = (key,sl) => S.lb[key]??sl.l;
 function slotValue(key,sl){
   if (key in S.a) return {n:S.a[key],inh:false};
-  if (sl.d) return {n:S.core[sl.d]||'',inh:true};
+  if (sl.d) return {n:lineup(key.split('.')[0]).core[sl.d]||'',inh:true};
   return {n:'',inh:false};
 }
 function slotMark(key,sl){ return key in S.m ? S.m[key] : (sl.m||''); }
-function mkValue(k){
-  if (k.includes(':')) return {n:S.mk[k]||'',inh:false};
-  if (k==='Skull') return {n:S.core.MT||'',inh:true};
-  if (k==='Cross') return {n:S.core.OT1||'',inh:true};
-  if (k==='Square') return {n:S.core.OT2||'',inh:true};
-  return {n:S.mk[k]||'',inh:false};
+const MKCORE = {Skull:'MT',Cross:'OT1',Square:'OT2'}; // these mark tanks follow the lineup
+function mkValue(raid,k){
+  const L=lineup(raid);
+  if (!k.includes(':') && MKCORE[k] && !(k in L.mk)) return {n:L.core[MKCORE[k]]||'',inh:true};
+  return {n:L.mk[k]||'',inh:false};
 }
 function slotDef(key){
   const [raid,b,s]=key.split('.'); let i=0;
@@ -400,19 +421,18 @@ function slotDef(key){
 
 // target descriptor: {t:'core'|'grp'|'boss'|'mk', k}
 function getVal(t){
-  if (t.t==='core') return S.core[t.k]||'';
+  if (t.t==='core'){ const [r,k]=lsplit(t.k); return lineup(r).core[k]||''; }
   if (t.t==='grp'){const [g,i]=t.k.split('.'); return S.groups[g][i]||'';}
   if (t.t==='boss') return slotValue(t.k,slotDef(t.k)).n;
-  if (t.t==='mk') return mkValue(t.k).n;
+  if (t.t==='mk'){ const [r,k]=lsplit(t.k); return mkValue(r,k).n; }
   return '';
 }
 function setVal(t,n){
-  if (t.t==='core') S.core[t.k]=n;
+  if (t.t==='core'){ const [r,k]=lsplit(t.k); lineup(r).core[k]=n; }
   else if (t.t==='grp'){const [g,i]=t.k.split('.'); S.groups[g][i]=n;}
   else if (t.t==='boss') S.a[t.k]=n;
-  else if (t.t==='mk'){
-    if (t.k==='Skull') S.core.MT=n; else if (t.k==='Cross') S.core.OT1=n; else if (t.k==='Square') S.core.OT2=n; else S.mk[t.k]=n;
-  }
+  else if (t.t==='mk'){ const [r,k]=lsplit(t.k); const L=lineup(r);
+    if (MKCORE[k] && n && n===L.core[MKCORE[k]]) delete L.mk[k]; else L.mk[k]=n; }
 }
 function removeFromGroups(n,except){
   S.groups.forEach((g,gi)=>g.forEach((x,i)=>{ if (x===n && (gi+'.'+i)!==except) S.groups[gi][i]=''; }));
@@ -440,17 +460,21 @@ function place(name, from, to){
 function packState(){
   return {v:1,d:S.date,l:S.lead,
     r:S.roster.map(p=>p.x&&p.x.length?[p.n,p.c,p.r,p.st,p.out?1:0,p.x]:[p.n,p.c,p.r,p.st,p.out?1:0]),
-    c:S.core,k:S.mk,g:S.groups,a:S.a,m:S.m,n:S.notes,b:S.lb,x:S.cx,h:S.hide,cn:S.cn,o:S.ord,t:S.st,ro:S.ro,tb:S.tabs,w:S.mkw,bd:S.board,bv:BOARD_VER};
+    L:S.L,g:S.groups,a:S.a,m:S.m,n:S.notes,b:S.lb,x:S.cx,h:S.hide,cn:S.cn,o:S.ord,t:S.st,ro:S.ro,tb:S.tabs,bd:S.board,bv:BOARD_VER};
 }
 function unpackState(o){
   const s=defaults();
   if (!o||o.v!==1) return s;
   s.date=o.d||''; s.lead=o.l||'';
   if (Array.isArray(o.r)) s.roster=o.r.map(r=>({n:String(r[0]),c:r[1],r:r[2],st:r[3]||'',out:!!r[4],x:Array.isArray(r[5])?r[5]:[]}));
-  if (o.c) Object.assign(s.core,o.c);
-  if (o.k) Object.assign(s.mk,o.k);
+  if (o.L) LRAIDS.forEach(r=>{ const x=o.L[r]; if (!x) return; const L=s.L[r];
+    if (Array.isArray(x.rows)) L.rows=x.rows; Object.assign(L.core,x.core||{}); L.mk=x.mk||{}; L.mkw=x.mkw||{}; });
+  else LRAIDS.forEach(r=>{ const L=s.L[r]; // older links had one lineup for both raids
+    if (o.c) Object.assign(L.core,o.c);
+    if (o.k){ L.mk={}; for (const k in o.k) if (o.k[k]) L.mk[k]=o.k[k]; }
+    if (o.w) L.mkw={...o.w}; });
   if (Array.isArray(o.g)&&o.g.length===8) s.groups=o.g.map(g=>{g=(g||[]).slice(0,5); while(g.length<5) g.push(''); return g;});
-  s.a=o.a||{}; s.m=o.m||{}; s.n=undefined; s.notes=o.n||{}; s.lb=o.b||{}; s.cx=o.x||{}; s.hide=o.h||{}; s.cn=o.cn||0; s.ord=o.o||{}; s.st=o.t||{}; s.ro=o.ro||{}; s.mkw=o.w||{}; s.board=(Array.isArray(o.bd)&&o.bv===BOARD_VER)?o.bd:null; s.oldBoard=!!o.bd&&!s.board; if (o.tb&&Array.isArray(o.tb.order)) s.tabs={order:o.tb.order,hidden:o.tb.hidden||[]};
+  s.a=o.a||{}; s.m=o.m||{}; s.n=undefined; s.notes=o.n||{}; s.lb=o.b||{}; s.cx=o.x||{}; s.hide=o.h||{}; s.cn=o.cn||0; s.ord=o.o||{}; s.st=o.t||{}; s.ro=o.ro||{}; s.board=(Array.isArray(o.bd)&&o.bv===BOARD_VER)?o.bd:null; s.oldBoard=!!o.bd&&!s.board; if (o.tb&&Array.isArray(o.tb.order)) s.tabs={order:o.tb.order,hidden:o.tb.hidden||[]};
   return s;
 }
 const b64u = {
@@ -481,12 +505,14 @@ function commit(){
   saveTimer=setTimeout(saveLocal,250);
 }
 function saveLocal(){
+  if (VIEW) return; // a view-only link never overwrites the viewer's own saved plan
   try { localStorage.setItem(STORE+'-maps', JSON.stringify(S.bassets||{})); } catch(e){}
   try { localStorage.setItem(STORE, JSON.stringify(packState())); setSaved('Saved in this browser'); }
   catch(e){ setSaved('Not saved (browser storage blocked). Use Copy share link.'); }
 }
 function setSaved(t){ document.getElementById('saved').textContent=t; }
 async function load(){
+  VIEW = /[#&]view=1(&|$)/.test(location.hash); document.body.classList.toggle('viewonly',VIEW);
   const h = location.hash.match(/[#&]p=([^&]+)/);
   if (h){
     try { S = unpackState(await decodeState(h[1])); loadMapAssets(); setSaved('Loaded from share link');
@@ -500,14 +526,24 @@ async function load(){
 // Bump when board.html is rebuilt from a newer map builder; older saved map edits are then dropped.
 const BOARD_VER='1793215686';
 function loadMapAssets(){ try { S.bassets=JSON.parse(localStorage.getItem(STORE+'-maps')||'{}')||{}; } catch(e){ S.bassets={}; }  if (S.oldBoard){ S.bassets={}; try { localStorage.removeItem(STORE+'-maps'); } catch(e){} } }
-async function share(){
+async function share(view){
   const code = await encodeState();
-  const url = location.origin+location.pathname+'#p='+code;
-  history.replaceState(null,'',url);
+  const url = location.origin+location.pathname+'#p='+code+(view?'&view=1':'');
+  if (!view && !VIEW) history.replaceState(null,'',url);
   const up = Object.keys(S.bassets||{}).length ? ' Note: images you uploaded onto maps stay in this browser only.' : '';
-  try { await navigator.clipboard.writeText(url); toast('Share link copied. Anyone who opens it sees this exact plan.'+up); }
+  const msg = view ? 'View-only link copied. People who open it can see the plan but not change it.'
+                   : 'Edit link copied. People who open it can change their own copy of this plan.';
+  try { await navigator.clipboard.writeText(url); toast(msg+up); }
   catch(e){ prompt('Copy this link:',url); }
 }
+function shareMenu(btn){
+  const r=btn.getBoundingClientRect();
+  openMenu(r.left,r.bottom+4, (VIEW?'':'<button data-share="edit">Copy edit link<span class="sub">They can change assignments and maps</span></button>')+
+    '<button data-share="view">Copy view-only link<span class="sub">They can look but not change anything</span></button>');
+}
+// view-only: lock every field except the roster filter and the player picker
+function lockInputs(){ if (!VIEW) return;
+  document.querySelectorAll('input,select,textarea').forEach(el=>{ if (el.id!=='q' && el.id!=='who') el.disabled=true; }); }
 
 /* ---------- rendering ---------- */
 const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -611,7 +647,7 @@ function mapHTML(raid,bi,name){
     <iframe class="mapframe" loading="lazy" title="${esc(name)} map" data-boss="${esc(name)}" src="board.html?boss=${encodeURIComponent(name)}${raid==='BWL'?'&zoom=1.25':''}"></iframe></div>`;
 }
 function renderMaps(){
-  return `<div class="fullmap"><iframe id="fullmap" class="mapframe" title="Strategy maps" src="board.html?full=1"></iframe></div>`;
+  return `<div class="fullmap"><iframe id="fullmap" class="mapframe" title="Strategy maps" src="board.html?full=1${VIEW?'&ro=1':''}"></iframe></div>`;
 }
 function renderRaid(raid){
   const bosses = DATA[raid], order = bossOrder(raid);
@@ -658,16 +694,19 @@ function renderRaid(raid){
 }
 
 function renderSetup(){
-  const core = CORE.map(([k,l])=>`<div class="mrow"><div class="mname">${esc(l)}</div>${dropHTML({t:'core',k},S.core[k]||'')}</div>`).join('');
-  const marks = `<div class="mkgrid mkhead"><span>Mark</span><span>Tank / handler</span><span>Puller</span><span>CC (sheep, trap, hibernate…)</span></div>` + MARKS.map(m=>{
-    const v=mkValue(m.k);
-    return `<div class="mkgrid"><div class="mname"><span class="mi" style="color:${m.c}">${m.s}</span><span>${m.k}<input class="mkw" data-mkw="${m.k}" value="${esc(S.mkw[m.k]??m.w)}" title="Click to change what this mark means"></span></div>
-      ${dropHTML({t:'mk',k:m.k},v.n,false)}${dropHTML({t:'mk',k:'pull:'+m.k},mkValue('pull:'+m.k).n,false)}${dropHTML({t:'mk',k:'cc:'+m.k},mkValue('cc:'+m.k).n,false)}</div>`;
+  const R=UI.lr, L=lineup(R);
+  const pick=`<div class="lrpick">${LRAIDS.map(r=>`<button class="btn small${r===R?' primary':''}" data-lr="${r}">${RAIDS[r].name}</button>`).join('')}<span class="hint" style="margin:0">Each raid keeps its own lineup and marks.</span></div>`;
+  const core = L.rows.map(([k,l])=>`<div class="mrow"><input class="lb mlb" data-crow="${R}/${esc(k)}" value="${esc(l)}" title="Click to rename">${dropHTML({t:'core',k:R+'/'+k},L.core[k]||'')}<button class="x rm" data-rmcrow="${R}/${esc(k)}" title="Remove this row">−</button></div>`).join('')
+    + `<button class="btn small ghost addrow" data-addcrow="${R}">+ Add row</button>`;
+const marks = `<div class="mkgrid mkhead"><span>Mark</span><span>Tank / handler</span><span>Puller</span><span>CC (sheep, trap, hibernate…)</span></div>` + MARKS.map(m=>{
+    const v=mkValue(R,m.k);
+    return `<div class="mkgrid"><div class="mname"><span class="mi" style="color:${m.c}">${m.s}</span><span>${m.k}<input class="mkw" data-mkw="${R}/${m.k}" value="${esc(L.mkw[m.k]??m.w)}" title="Click to change what this mark means"></span></div>
+      ${dropHTML({t:'mk',k:R+'/'+m.k},v.n,v.inh)}${dropHTML({t:'mk',k:R+'/pull:'+m.k},mkValue(R,'pull:'+m.k).n,false)}${dropHTML({t:'mk',k:R+'/cc:'+m.k},mkValue(R,'cc:'+m.k).n,false)}</div>`;
   }).join('');
-  return `<div class="setupgrid">
-    <section class="card"><div class="hd"><h2>Tanks &amp; healers</h2></div><div class="bd">
-      <p class="hint">These fill every boss by default (shown with a dotted border). Change a boss slot to override it for that boss only.</p>${core}</div></section>
-    <section class="card"><div class="hd"><h2>Pull marks</h2></div><div class="bd">
+  return `${pick}<div class="setupgrid">
+    <section class="card"><div class="hd"><h2>${RAIDS[R].name}: tanks &amp; healers</h2></div><div class="bd">
+      <p class="hint">These fill every ${R} boss by default (shown with a dotted border). Change a boss slot to override it for that boss only. Click a role name to rename it.</p>${core}</div></section>
+    <section class="card"><div class="hd"><h2>${R} pull marks</h2></div><div class="bd">
       <p class="hint">Who tanks, pulls and CCs each mark on trash. Skull, Cross and Square tanks follow the MT, OT1 and OT2. Click a mark's description to change it.</p>${marks}
       <button class="btn small" data-copymarks="1" style="margin-top:8px">Copy marks as text</button></div></section>
   </div>`;
@@ -702,8 +741,9 @@ function bossPicker(p,i){
 }
 function playerData(n){
   const out={core:[],marks:[],group:groupOf(n),raids:[],skips:[]};
-  CORE.forEach(([k,l])=>{ if (S.core[k]===n) out.core.push(l); });
-  MARKS.forEach(m=>{ [['',m.k,'tank'],['pull:','pull:'+m.k,'pull'],['cc:','cc:'+m.k,'CC']].forEach(([_,k,role])=>{ if (mkValue(k).n===n) out.marks.push({...m,role}); }); });
+  LRAIDS.forEach(r=>{ const L=lineup(r);
+    L.rows.forEach(([k,l])=>{ if (L.core[k]===n) out.core.push(r+' '+l); });
+    MARKS.forEach(m=>{ [[m.k,'tank'],['pull:'+m.k,'pull'],['cc:'+m.k,'CC']].forEach(([k,role])=>{ if (mkValue(r,k).n===n) out.marks.push({...m,role,raid:r}); }); }); });
   ['BWL','AQ40','BUFF'].forEach(raid=>{
     const items=[];
     bossOrder(raid).forEach(bi=>{
@@ -720,7 +760,7 @@ function playerText(n){
   const d=playerData(n); const L=[`Assignments for ${n}${S.date?' · '+S.date:''}`];
   if (d.core.length) L.push('Role: '+d.core.join(', '));
   if (d.group) L.push('Group '+d.group);
-  if (d.marks.length) L.push('Trash marks: '+d.marks.map(m=>'{'+m.k.toLowerCase()+'} '+m.role).join(', '));
+  if (d.marks.length) L.push('Trash marks: '+d.marks.map(m=>m.raid+' {'+m.k.toLowerCase()+'} '+m.role).join(', '));
   d.raids.forEach(r=>{ if (!r.items.length) return; L.push('', r.raid==='BUFF'?'Buffs':r.raid);
     r.items.forEach(it=>L.push(`${it.name}: `+it.jobs.map(j=>`${j.m?'{'+j.m.toLowerCase()+'} ':''}${j.l}`+(r.raid==='BUFF'?` (${j.sec})`:'')).join(', '))); });
   if (d.skips.length) L.push('','Sitting out: '+d.skips.join(', '));
@@ -741,7 +781,7 @@ function renderPlayer(){
     <div class="pfacts">
       <div><span class="k">Role</span><b>${d.core.length?esc(d.core.join(', ')):'—'}</b></div>
       <div><span class="k">Group</span><b>${d.group?'Group '+d.group:'Not in a group'}</b></div>
-      <div><span class="k">Trash marks</span><b>${d.marks.length?d.marks.map(m=>`<span style="white-space:nowrap"><span class="mi" style="color:${m.c}" title="${m.k}">${m.s}</span> ${m.role}</span>`).join(' '):'—'}</b></div>
+      <div><span class="k">Trash marks</span><b>${d.marks.length?d.marks.map(m=>`<span style="white-space:nowrap"><span class="mi" style="color:${m.c}" title="${m.k}">${m.s}</span> ${m.raid} ${m.role}</span>`).join(' '):'—'}</b></div>
     </div>${d.skips.length?`<p class="hint sitout" style="margin-top:10px">Sitting out: ${esc(d.skips.join(', '))}</p>`:''}</div></section>`;
   d.raids.forEach(r=>{
     h+=`<section class="card" style="--bossc:${RAIDS[r.raid].c}"><div class="hd"><h2>${r.raid==='BUFF'?'Buffs':esc(RAIDS[r.raid].name)}</h2><span class="hint" style="margin:0">${r.items.reduce((a,i)=>a+i.jobs.length,0)} jobs</span></div><div class="bd">`;
@@ -755,7 +795,7 @@ function renderPlayer(){
 }
 async function shareFor(n){
   const code=await encodeState();
-  const url=location.origin+location.pathname+'#p='+code+'&who='+encodeURIComponent(n);
+  const url=location.origin+location.pathname+'#p='+code+'&who='+encodeURIComponent(n)+(VIEW?'&view=1':'');
   try { await navigator.clipboard.writeText(url); toast(`Link copied. It opens straight to ${n}'s assignments.`); } catch(e){ prompt('Copy this link:',url); }
 }
 function renderRoster(){
@@ -798,6 +838,7 @@ function render(){
   else m.innerHTML=renderRoster();
   document.getElementById('f-date').value=S.date;
   document.getElementById('f-lead').value=S.lead;
+  lockInputs();
   const sb=document.getElementById('selbar');
   if (UI.sel){ sb.classList.add('on'); document.getElementById('seltext').textContent=`Tap a slot to place ${UI.sel.n}`; }
   else sb.classList.remove('on');
@@ -909,6 +950,11 @@ function tapChip(n,from){
   UI.sel={n,from}; render();
 }
 
+const VO_BLOCK='.chip,.grip,.drop,.tab,[data-tm],[data-tabmenu],#addform';
+['mousedown','touchstart','dragstart','contextmenu'].forEach(t=>document.addEventListener(t,e=>{
+  if (VIEW && e.target.closest && e.target.closest(VO_BLOCK) && !(t==='mousedown'&&e.target.closest('.tab'))) { e.stopImmediatePropagation(); if (t!=='touchstart') e.preventDefault(); }
+},{capture:true,passive:false}));
+document.addEventListener('click',e=>{ if (VIEW && e.target.closest && e.target.closest('.chip,.drop,[data-tm]') && !e.target.closest('[data-player]')) e.stopImmediatePropagation(); },true);
 document.addEventListener('mousedown',e=>{
   if (e.button!==0) return;
   const grip=e.target.closest('.grip'); if (grip){ e.preventDefault(); rowStart(grip,e.clientY); return; }
@@ -948,7 +994,7 @@ document.addEventListener('drop',e=>{ if (!dragTab) return; e.preventDefault(); 
   if (t && t.dataset.tab!==dragTab){ const o=tabOrder().filter(k=>k!==dragTab); o.splice(o.indexOf(t.dataset.tab),0,dragTab); S.tabs.order=o; commit(); }
   dragTab=null; });
 document.addEventListener('dragend',()=>{ dragTab=null; document.querySelectorAll('.tab.dragover').forEach(x=>x.classList.remove('dragover')); });
-document.addEventListener('keydown',e=>{ if (e.key==='Enter' && e.target.dataset && e.target.dataset.lb){ e.target.blur(); return; } });
+document.addEventListener('keydown',e=>{ if (e.key==='Enter' && e.target.dataset && (e.target.dataset.lb||e.target.dataset.crow)){ e.target.blur(); return; } });
 document.addEventListener('keydown',e=>{ if (e.key==='Escape'){ closeMenu();  cancelDrag(); if (UI.sel){UI.sel=null; render();} } });
 
 document.addEventListener('click',e=>{
@@ -962,8 +1008,14 @@ document.addEventListener('click',e=>{
   if (!el.closest('#ctx')) closeMenu();
   const tmb=el.closest('[data-tabmenu]'); if (tmb){ const r=tmb.getBoundingClientRect(); openMenu(r.left,r.bottom+4,'<div class="lbl">Tabs</div><div class="hint" style="padding:0 10px 4px;margin:0">Drag tabs to reorder, or right-click (long-press on a phone) for options.</div>'+hiddenList()); return; }
   const pv=el.closest('[data-player]'); if (pv){ UI.who=pv.dataset.player; UI.tab='player'; if (S.tabs.hidden.includes('player')) S.tabs.hidden=S.tabs.hidden.filter(x=>x!=='player'); render(); window.scrollTo(0,0); return; }
-  if (el.closest('[data-copymarks]')){ const t=MARKS.map(m=>{ const parts=[['Tank',mkValue(m.k).n],['Pull',mkValue('pull:'+m.k).n],['CC',mkValue('cc:'+m.k).n]].filter(x=>x[1]);
-      return parts.length?`{${m.k.toLowerCase()}} ${S.mkw[m.k]??m.w}: `+parts.map(x=>x[0]+' '+x[1]).join(', '):''; }).filter(Boolean).join('\n');
+  const lr=el.closest('[data-lr]'); if (lr){ UI.lr=lr.dataset.lr; render(); return; }
+  const ac=el.closest('[data-addcrow]'); if (ac){ const L=lineup(ac.dataset.addcrow); const k='c'+(++S.cn); L.rows.push([k,'New role']); commit();
+    const inp=document.querySelector(`[data-crow="${ac.dataset.addcrow}/${k}"]`); if (inp){ inp.focus(); inp.select(); } return; }
+  const rc=el.closest('[data-rmcrow]'); if (rc){ const [r,k]=lsplit(rc.dataset.rmcrow); const L=lineup(r); const row=L.rows.find(x=>x[0]===k);
+    if (row && L.core[k] && !confirm(`Remove the ${row[1]} row (${L.core[k]})?`)) return;
+    L.rows=L.rows.filter(x=>x[0]!==k); delete L.core[k]; commit(); return; }
+  if (el.closest('[data-copymarks]')){ const R=UI.lr, Lr=lineup(R); const t=MARKS.map(m=>{ const parts=[['Tank',mkValue(R,m.k).n],['Pull',mkValue(R,'pull:'+m.k).n],['CC',mkValue(R,'cc:'+m.k).n]].filter(x=>x[1]);
+      return parts.length?`{${m.k.toLowerCase()}} ${Lr.mkw[m.k]??m.w}: `+parts.map(x=>x[0]+' '+x[1]).join(', '):''; }).filter(Boolean).join('\n');
     navigator.clipboard.writeText(t).then(()=>toast('Copied. Marks show as icons in WoW chat.'),()=>prompt('Copy:',t)); return; }
   const pl=el.closest('[data-plink]'); if (pl){ shareFor(pl.dataset.plink); return; }
   const pt=el.closest('[data-ptext]'); if (pt){ const t=playerText(pt.dataset.ptext); navigator.clipboard.writeText(t).then(()=>toast('Copied.'),()=>prompt('Copy:',t)); return; }
@@ -1002,7 +1054,8 @@ document.addEventListener('click',e=>{
     for (let g=0;g<8&&un.length;g++) for (let i=0;i<5&&un.length;i++) if (!S.groups[g][i]) S.groups[g][i]=un.shift();
     commit(); if (un.length) toast(`No room for ${un.length} more.`); return; }
   if (el.closest('#b-cleargroups')){ if (confirm('Empty all 8 groups?')){ S.groups=S.groups.map(g=>g.map(()=>'')); commit(); } return; }
-  if (el.closest('#b-share')){ share(); return; }
+  const sh=el.closest('[data-share]'); if (sh){ closeMenu(); share(sh.dataset.share==='view'); return; }
+  if (el.closest('#b-share')){ shareMenu(el.closest('#b-share')); return; }
   if (el.closest('#b-reset')){ if (confirm('Reset everything to the starting roster and assignments? Your current plan in this browser will be replaced.')){ S=defaults(); history.replaceState(null,'',location.pathname); commit(); mapFrames().forEach(f=>sendLoad(f.contentWindow)); toast('Reset to the starting plan.'); } return; }
   if (el.closest('#b-addtoggle')){ const f=document.getElementById('addform'); f.hidden=!f.hidden; if (!f.hidden) document.getElementById('add-n').focus(); return; }
   if (el.closest('#selcancel')){ UI.sel=null; render(); return; }
@@ -1016,7 +1069,8 @@ document.addEventListener('click',e=>{
 document.addEventListener('change',e=>{
   const el=e.target;
   if (el.dataset.bx){ const [i,id]=el.dataset.bx.split('|'); const p=S.roster[+i]; p.x=(p.x||[]).filter(z=>z!==id); if (!el.checked) p.x.push(id); commit(); return; }
-  if (el.dataset.mkw){ const v=el.value.trim(); const m=MK[el.dataset.mkw]; if (!v||v===m.w) delete S.mkw[m.k]; else S.mkw[m.k]=v; commit(); return; }
+  if (el.dataset.mkw){ const [r,k]=lsplit(el.dataset.mkw); const L=lineup(r), m=MK[k]; const v=el.value.trim(); if (!v||v===m.w) delete L.mkw[k]; else L.mkw[k]=v; commit(); return; }
+  if (el.dataset.crow){ const [r,k]=lsplit(el.dataset.crow); const row=lineup(r).rows.find(x=>x[0]===k); const v=el.value.trim(); if (row && v) row[1]=v; commit(); return; }
   if (el.id==='who'){ UI.who=el.value; render(); return; }
   if (el.dataset.lb){ const v=el.value.trim(); if (v) S.lb[el.dataset.lb]=v; else delete S.lb[el.dataset.lb]; commit(); return; }
   if (el.dataset.mk){ S.m[el.dataset.mk]=el.value; commit(); return; }
@@ -1040,8 +1094,9 @@ document.addEventListener('input',e=>{
 });
 function renamePlayer(o,n){
   const p=player(o); if (p) p.n=n;
-  for (const k in S.core) if (S.core[k]===o) S.core[k]=n;
-  for (const k in S.mk) if (S.mk[k]===o) S.mk[k]=n;
+  LRAIDS.forEach(r=>{ const L=lineup(r);
+    for (const k in L.core) if (L.core[k]===o) L.core[k]=n;
+    for (const k in L.mk) if (L.mk[k]===o) L.mk[k]=n; });
   for (const k in S.a) if (S.a[k]===o) S.a[k]=n;
   S.groups.forEach(g=>g.forEach((x,i)=>{ if (x===o) g[i]=n; }));
 }
