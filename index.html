@@ -160,6 +160,23 @@ textarea.stratbox{margin-top:0;font-size:13px;line-height:1.5}
 .pjob small{color:var(--faint)}
 .pjob .mi{width:20px;height:20px;font-size:12px}
 @media (max-width:520px){.pboss{grid-template-columns:1fr;gap:4px}}
+.card .bd{container-type:inline-size}
+.cgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+.cgrid .mapwrap{grid-column:1/-1;order:-1;margin-top:0}
+.cl,.cr{display:grid;gap:12px;align-content:start;min-width:0}
+.cgrid.nomap{grid-template-columns:1fr}
+.cgrid.nomap .cl{grid-template-columns:repeat(auto-fill,minmax(330px,1fr))}
+.cgrid.nomap .cr{display:none}
+@container (min-width:980px){
+  .cgrid:not(.nomap){grid-template-columns:minmax(290px,.85fr) minmax(0,1.5fr) minmax(290px,.85fr);gap:12px;align-items:stretch}
+  .cgrid:not(.nomap) .mapwrap{grid-column:auto;order:0;display:flex;flex-direction:column}
+  .cgrid:not(.nomap) .mapwrap .mapframe{flex:1;height:auto;min-height:380px}
+  .cgrid .maphd .hint{display:none}
+  .cgrid:not(.nomap) .row{grid-template-columns:12px minmax(64px,1fr) minmax(92px,1.15fr) 36px 16px;gap:5px}
+  .cgrid:not(.nomap) .row .mk{width:36px}
+  .cgrid:not(.nomap) input.sech{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+}
+@container (max-width:600px){ .cgrid{grid-template-columns:1fr} }
 .mapwrap{margin-top:14px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#0a090c}
 .maphd{display:flex;align-items:center;gap:8px;padding:7px 10px;background:#14171d;border-bottom:1px solid var(--line)}
 .maphd>span:first-child{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
@@ -600,14 +617,20 @@ function renderRaid(raid){
     <button data-expand="${raid}">Expand all</button><button data-collapse="${raid}">Collapse all</button></div>`;
   order.forEach((bi,pos)=>{ const b=bosses[bi];
     const id = raid+'-'+bi;
-    const secs = bossSecs(raid,bi).map(sec=>{
+    const allSecs = bossSecs(raid,bi);
+    const secHTML = sec=>{
       const rows = sec.slots.map(({sl,key})=>{
         const v=slotValue(key,sl);
         const reset = (sl.d && key in S.a) ? `<button class="x" data-reset="${key}" title="Go back to the default from the Setup tab (${sl.d})">↺</button>` : '';
         return `<div class="row${raid==='BUFF'?' nomk':''}" data-row="${key}" data-sec="${raid}.${bi}.${sec.si}"><span class="grip" title="Drag to reorder">⠿</span><input class="lb" data-lb="${key}" value="${esc(slotLabel(key,sl))}" placeholder="${esc(sl.l)}"${sl.t?` title="${esc(sl.t)}"`:' title="Click to rename"'}>${dropHTML({t:'boss',k:key},v.n,v.inh,'',reset)}${raid==='BUFF'?'':markSelect(key,slotMark(key,sl))}<button class="x rm" data-rmslot="${key}" title="Remove this row">−</button></div>`;
       }).join('');
       return `<div class="sec"><input class="sech" data-lb="${sec.hk}" value="${esc(sec.h)}" title="Click to rename">${rows}<button class="addslot" data-addslot="${raid}.${bi}.${sec.si}">+ Add row</button></div>`;
-    }).join('');
+    };
+    // tanks and jobs on the left of the map, healing on the right
+    let L=allSecs.filter(x=>!/heal/i.test(x.h)), Rt=allSecs.filter(x=>/heal/i.test(x.h));
+    if (raid==='BUFF'){ L=allSecs; Rt=[]; }
+    else if (!Rt.length && L.length>1){ Rt=L.splice(Math.ceil(L.length/2)); }
+    else if (!L.length && Rt.length>1){ L=Rt.splice(0,Math.ceil(Rt.length/2)); }
     const sitting = S.roster.filter(p=>!p.out && p.x && p.x.includes(raid+'.'+bi)).map(p=>p.n);
     const sitHTML = sitting.length ? `<p class="hint sitout">Sitting out: ${sitting.map(esc).join(', ')}</p>` : '';
     const sid=raid+'.'+bi, lines=stratText(raid,bi).split('\n').map(x=>x.replace(/^\s*[•\-*]\s*/,'').trim()).filter(Boolean);
@@ -624,7 +647,7 @@ function renderRaid(raid){
         <button class="btn small" data-copy="${raid}|${bi}" title="Copy assignments as text for raid chat or Discord">Copy text</button>
         ${Object.keys(S.hide).some(k=>k.startsWith(raid+'.'+bi+'.'))?`<button class="btn small ghost" data-restore="${raid}.${bi}">Restore rows</button>`:''}
         <button class="btn small ghost" data-clearboss="${raid}|${bi}" title="Clear this boss back to defaults">Clear</button></div>
-      <div class="bd"><div class="ctop">${sitHTML}<div class="secs">${secs}</div></div>${raid==='BUFF'?'':mapHTML(raid,bi,b.name)}
+      <div class="bd"><div class="csit">${sitHTML}</div><div class="cgrid${raid==='BUFF'?' nomap':''}"><div class="cl">${L.map(secHTML).join('')}</div>${raid==='BUFF'?'':mapHTML(raid,bi,b.name)}<div class="cr">${Rt.map(secHTML).join('')}</div></div>
         <div class="cbot">${raid==='BUFF'?notes:`<details class="mech" data-mech="${sid}"${UI.editStrat===sid||UI.mech.has(sid)?' open':''}><summary>Mechanics notes</summary>${notes}</details>`}
         <textarea class="free" data-note="${raid}.${bi}" placeholder="${raid==='BUFF'?'Notes for this week…':'Notes for this week (breaths, kill order, positions…)'}">${esc(S.notes[raid+'.'+bi]||'')}</textarea></div></div>
     </section>`;
@@ -757,7 +780,7 @@ function patchRaid(m,html){
   if (oc.length!==nc.length || oc.some((c,i)=>c.id!==nc[i].id)) return false;
   m.querySelector(':scope > .bossnav').replaceWith(t.querySelector(':scope > .bossnav'));
   oc.forEach((c,i)=>{ const n=nc[i]; c.className=n.className;
-    ['.hd','.ctop','.cbot'].forEach(sel=>{ const a=c.querySelector(sel), b=n.querySelector(sel); if (a&&b) a.replaceWith(b); }); });
+    ['.hd','.csit','.cl','.cr','.cbot'].forEach(sel=>{ const a=c.querySelector(sel), b=n.querySelector(sel); if (a&&b) a.replaceWith(b); }); });
   return true;
 }
 function render(){
