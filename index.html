@@ -608,7 +608,7 @@ function hiddenList(){
 function mapHTML(raid,bi,name){
   return `<div class="mapwrap"><div class="maphd"><span>Strategy map</span><span class="hint" style="margin:0;flex:1">Drag to pan · Ctrl + scroll to zoom</span>
     <button class="btn small primary" data-editmap="${esc(name)}">✎ Edit map</button><button class="btn small" data-tab="maps">Full board</button></div>
-    <iframe class="mapframe" loading="lazy" title="${esc(name)} map" data-boss="${esc(name)}" src="board.html?boss=${encodeURIComponent(name)}"></iframe></div>`;
+    <iframe class="mapframe" loading="lazy" title="${esc(name)} map" data-boss="${esc(name)}" src="board.html?boss=${encodeURIComponent(name)}${raid==='BWL'?'&zoom=1.25':''}"></iframe></div>`;
 }
 function renderMaps(){
   return `<div class="fullmap"><iframe id="fullmap" class="mapframe" title="Strategy maps" src="board.html?full=1"></iframe></div>`;

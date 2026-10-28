@@ -2252,6 +2252,9 @@ boot();
     const b = $('#banner'); if (b) b.hidden = true;
   };
   publishPlan = function () { persist(); toast('Saved to your raid plan'); };
+  // ?zoom=1.25 starts each map in a boss card zoomed in from the fitted view
+  const ZOOM = parseFloat(Q.get('zoom')) || 1;
+  if (card && ZOOM !== 1) { const origFit = fitView; fitView = function () { origFit(); zoomAt(ZOOM); }; }
   const origStep = stepPage;
   stepPage = function (d) {
     const idx = card ? bossPages() : null;
