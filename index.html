@@ -1,0 +1,665 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ashen Raid Planner</title>
+<meta name="description" content="Drag-and-drop raid assignments for BWL and AQ40: tanks, healers, marks and groups.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0f1115; --panel:#171a21; --panel2:#1d212a; --line:#2a2f3a; --line2:#353b48;
+  --text:#e7e9ee; --muted:#9aa1ae; --faint:#6b7280;
+  --accent:#d9a441; --accent2:#f0c46a; --danger:#e06666; --ok:#6fbf73;
+  --drop:#2a3446; --drophi:#34507a;
+  --r:10px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font:14px/1.4 Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+body{min-height:100vh}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+a{color:var(--accent2)}
+
+/* header */
+header{position:sticky;top:0;z-index:30;background:rgba(15,17,21,.94);backdrop-filter:blur(6px);border-bottom:1px solid var(--line)}
+.bar{display:flex;align-items:center;gap:12px;padding:10px 16px;flex-wrap:wrap}
+.brand{font-family:Cinzel,serif;font-weight:700;font-size:20px;letter-spacing:.5px;color:var(--accent2);white-space:nowrap}
+.brand small{font-family:Inter,sans-serif;font-weight:500;font-size:12px;color:var(--muted);letter-spacing:0;margin-left:6px}
+.meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.meta label{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.meta input{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:5px 8px;width:140px}
+.spacer{flex:1}
+.btn{background:var(--panel2);border:1px solid var(--line2);border-radius:8px;padding:7px 12px;font-weight:600;font-size:13px;white-space:nowrap}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#1a1307}
+.btn.primary:hover{background:var(--accent2)}
+.btn.small{padding:4px 9px;font-size:12px}
+.btn.ghost{background:transparent}
+.tabs{display:flex;gap:2px;padding:0 16px;overflow-x:auto}
+.tab{background:none;border:none;border-bottom:2px solid transparent;padding:9px 14px;color:var(--muted);font-weight:600;white-space:nowrap}
+.tab:hover{color:var(--text)}
+.tab.on{color:var(--accent2);border-bottom-color:var(--accent)}
+.saved{font-size:12px;color:var(--faint)}
+
+/* layout */
+.wrap{display:grid;grid-template-columns:260px minmax(0,1fr);gap:16px;padding:16px;max-width:1500px;margin:0 auto}
+aside{position:sticky;top:104px;align-self:start;max-height:calc(100vh - 120px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px}
+aside h3{margin:0 0 4px;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.hint{font-size:12px;color:var(--faint);margin:0 0 10px}
+.search{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px 9px;margin-bottom:10px}
+.rgroup{margin-bottom:10px}
+.rgroup h4{margin:0 0 6px;font-size:11px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.08em}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+main{min-width:0}
+
+/* player chip */
+.chip{--cc:#888;display:inline-flex;align-items:center;gap:6px;max-width:100%;padding:4px 8px 4px 6px;border-radius:7px;background:#232833;border:1px solid #303644;border-left:4px solid var(--cc);
+  font-weight:600;font-size:13px;color:var(--cc);cursor:grab;user-select:none;-webkit-user-select:none;touch-action:manipulation;white-space:nowrap}
+.chip:hover{background:#2a303c}
+.chip .nm{overflow:hidden;text-overflow:ellipsis}
+.chip .ct{font-size:10px;font-weight:700;color:var(--muted);background:#151820;border-radius:5px;padding:0 5px;line-height:16px}
+.chip.out{opacity:.45;text-decoration:line-through}
+.chip.sel{outline:2px solid var(--accent);outline-offset:1px}
+.chip.unknown{--cc:#e06666;border-style:dashed}
+.dragghost{position:fixed;z-index:100;pointer-events:none;transform:translate(-50%,-60%) rotate(-2deg);box-shadow:0 8px 24px rgba(0,0,0,.5)}
+body.dragging,body.dragging *{cursor:grabbing!important}
+body.dragging .drop{background:var(--drop)}
+.drop.hi{background:var(--drophi)!important;outline:2px solid var(--accent)}
+
+/* cards */
+.card{scroll-margin-top:112px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin-bottom:14px;overflow:hidden}
+.card>.hd{display:flex;align-items:center;gap:10px;padding:10px 14px;background:linear-gradient(90deg,var(--bossc,#3a2a14),transparent 80%);border-bottom:1px solid var(--line)}
+.card>.hd h2{margin:0;font-family:Cinzel,serif;font-size:17px;font-weight:700;flex:1}
+.card>.hd .num{font-family:Cinzel,serif;color:var(--accent2);font-weight:700}
+.card .bd{padding:12px 14px}
+.card.collapsed .bd{display:none}
+.caret{background:none;border:none;color:var(--muted);font-size:14px;padding:2px 6px}
+.secs{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px}
+.sec h5{margin:0 0 6px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.row{display:grid;grid-template-columns:minmax(90px,1fr) minmax(120px,1.25fr) 44px;gap:6px;align-items:center;margin-bottom:5px}
+.row .lb{font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .lb[title]{text-decoration:underline dotted var(--faint);text-underline-offset:3px}
+.drop{min-height:30px;border:1px dashed var(--line2);border-radius:7px;padding:2px;display:flex;align-items:center;gap:4px;background:#14171d;transition:background .1s}
+.drop.filled{border-style:solid;border-color:#2c3240}
+.drop .chip{flex:1;min-width:0}
+.drop .empty{font-size:12px;color:var(--faint);padding:0 6px}
+.drop.inherit .chip{border-style:dotted;background:#1d2129}
+.x{background:none;border:none;color:var(--faint);font-size:15px;line-height:1;padding:2px 5px;border-radius:5px}
+.x:hover{color:var(--danger);background:#2a1f22}
+.mk{appearance:none;-webkit-appearance:none;width:44px;height:30px;border-radius:7px;border:1px solid var(--line2);background:#14171d;text-align:center;text-align-last:center;font-size:15px;padding:0;cursor:pointer}
+.mk:hover{border-color:var(--accent)}
+.notes{margin:12px 0 0;padding:10px 12px 10px 28px;background:#14171d;border:1px solid var(--line);border-radius:8px;color:var(--muted);font-size:13px}
+.notes li{margin:3px 0}
+textarea.free{width:100%;margin-top:10px;min-height:54px;background:#14171d;border:1px solid var(--line);border-radius:8px;padding:8px 10px;resize:vertical}
+.bossnav{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.bossnav button{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:12px;font-weight:600;color:var(--muted)}
+.bossnav button:hover{color:var(--text);border-color:var(--accent)}
+
+/* setup */
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}
+.mrow{display:grid;grid-template-columns:120px minmax(120px,1fr);gap:8px;align-items:center;margin-bottom:6px}
+.mname{display:flex;align-items:center;gap:8px;font-weight:600}
+.mname small{display:block;font-weight:400;font-size:11px;color:var(--faint)}
+.mi{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;font-size:14px;flex:none;background:#14171d;border:1px solid var(--line2)}
+
+/* groups */
+.groups{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.grp{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:10px}
+.grp h4{margin:0 0 8px;display:flex;justify-content:space-between;font-size:13px}
+.grp h4 span{color:var(--faint);font-weight:500}
+.grp .drop{margin-bottom:5px}
+.ungrouped{margin-top:14px}
+
+/* roster table */
+table.rt{width:100%;border-collapse:collapse;font-size:13px}
+.rt th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);font-weight:700;padding:6px;border-bottom:1px solid var(--line)}
+.rt td{padding:4px 6px;border-bottom:1px solid #20242d}
+.rt input,.rt select{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:4px 6px;width:100%}
+.rt input.nm{font-weight:600}
+.rt .sw{width:10px;height:22px;border-radius:3px}
+.tablewrap{overflow-x:auto}
+
+.selbar{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:40;background:var(--accent);color:#1a1307;font-weight:700;padding:9px 14px;border-radius:999px;box-shadow:0 6px 20px rgba(0,0,0,.4);display:none;align-items:center;gap:10px;max-width:calc(100vw - 32px)}
+.selbar.on{display:flex}
+.selbar button{background:#1a1307;color:var(--accent2);border:none;border-radius:999px;padding:3px 10px;font-weight:700}
+.toast{position:fixed;right:16px;bottom:16px;z-index:50;background:#22303f;border:1px solid #34507a;color:var(--text);padding:10px 14px;border-radius:10px;opacity:0;transform:translateY(8px);transition:.2s;pointer-events:none;max-width:calc(100vw - 32px)}
+.toast.on{opacity:1;transform:none}
+.legend{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:12px;color:var(--muted);margin-top:10px}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+
+@media (max-width:860px){
+  .wrap{grid-template-columns:1fr;padding:12px 16px}
+  aside{position:relative;top:0;max-height:none}
+  .meta input{width:120px}
+  header{position:relative}
+}
+@media (max-width:420px){
+  .secs{grid-template-columns:1fr}
+  .row{grid-template-columns:minmax(80px,1fr) minmax(110px,1.3fr) 40px}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="brand">Ashen Raid Planner<small>BWL · AQ40</small></div>
+    <div class="meta">
+      <label>Date <input id="f-date" type="text" placeholder="Tue Nov 4"></label>
+      <label>Raid leader <input id="f-lead" type="text" placeholder="Name"></label>
+    </div>
+    <div class="spacer"></div>
+    <span class="saved" id="saved"></span>
+    <button class="btn" id="b-reset" title="Go back to the starting roster and assignments">Reset</button>
+    <button class="btn primary" id="b-share">Copy share link</button>
+  </div>
+  <nav class="tabs" id="tabs"></nav>
+</header>
+
+<div class="wrap">
+  <aside id="bench">
+    <h3>Roster</h3>
+    <p class="hint">Drag a name onto any slot. On a phone, tap a name and then tap a slot. Drag a name back here to clear a slot.</p>
+    <input class="search" id="q" placeholder="Filter names…">
+    <div id="benchlist"></div>
+    <div class="legend" id="legend"></div>
+  </aside>
+  <main id="main"></main>
+</div>
+
+<div class="selbar" id="selbar"><span id="seltext"></span><button id="selcancel">Cancel</button></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const DATA = {"roster":[["Methl","Warrior","Tank","Core",0,"Main Tank"],["Dellz","Warrior","Tank","Rotation",0,"Off Tank 1. Class read from sign-up icon, please check"],["Xanthori","Warrior","Tank","Rotation",0,"Off Tank 2. Class read from sign-up icon, please check"],["Cassyiskewl","Paladin","Healer","Rotation",0,"Main MT healer"],["Tyrivandril","Paladin","Healer","Core",0,"MT healer 2"],["Lavona","Paladin","Healer","Rotation",0,"MT healer 3"],["Dauerscalf","Priest","Healer","Rotation",0,""],["Nocktus","Druid","Healer","Rotation",0,""],["Whoville","Druid","Healer","Rotation",0,"Spelled Wholville in chat, Whoville on the sign-up"],["Eko","Shaman","Healer","Rotation",0,""],["Jimbo","Warrior","Melee","Core",0,""],["Knutt","Warrior","Melee","Rotation",0,"Name cut off on sign-up (Knutt(W...), check spelling"],["goreblas","Warrior","Melee","Rotation",0,"Name cut off on sign-up, check spelling"],["SaucemcSaucy","Warrior","Melee","Rotation",0,"No Core/Rotation tag on sign-up, set to Rotation"],["Vice","Rogue","Melee","Core",0,""],["DoughBoy","Rogue","Melee","Core",0,""],["Whisper","Rogue","Melee","Rotation",0,""],["Wood","Rogue","Melee","Rotation",0,""],["Barnne","Druid","Melee","Core",0,""],["Aedhrian","Paladin","Melee","Core",0,""],["Zoobi","Shaman","Melee","Core",0,""],["Volkan","Shaman","Melee","Rotation",0,""],["betterMatt","Hunter","Ranged","Core",0,""],["Nickels","Hunter","Ranged","Core",0,""],["Blacktre","Hunter","Ranged","Rotation",0,"Name cut off on sign-up, check spelling"],["tenletters","Mage","Ranged","Core",0,""],["Bluntskix","Mage","Ranged","Core",0,""],["Pontolicious","Warlock","Ranged","Core",0,""],["Demonussy","Warlock","Ranged","Core",0,""],["Afflican","Warlock","Ranged","Rotation",0,"Name cut off on sign-up, check spelling"],["Triel","Druid","Ranged","Core",0,""],["Nomsy","Priest","Ranged","Rotation",0,""],["Shambert","Shaman","Ranged","Core",0,""],["Sent","Mage","Ranged","Trial",0,"Signed up Tentative. Class read from icon, please check"]],"groups":[["Methl","Dellz","Xanthori","Volkan","Barnne"],["Jimbo","Knutt","goreblas","SaucemcSaucy","Zoobi"],["Vice","DoughBoy","Whisper","Wood","Aedhrian"],["betterMatt","Nickels","Blacktre","Triel","Nomsy"],["tenletters","Bluntskix","Pontolicious","Demonussy","Afflican"],["Cassyiskewl","Tyrivandril","Lavona","Dauerscalf","Eko"],["Nocktus","Whoville","Shambert","Sent",""],["","","","",""]],"BWL":[{"name":"Razorgore the Untamed","secs":[{"h":"TANKS","slots":[{"l":"Razorgore (phase 2)","d":"MT","m":"Skull","t":"Picks him up when the last egg breaks. Stay ahead on threat: Conflagration disorients his target."},{"l":"Left side adds","d":"OT1","m":"Cross","t":"Dragonspawn and Legionnaires from the left door"},{"l":"Right side adds","d":"OT2","m":"Square","t":"Dragonspawn and Legionnaires from the right door"},{"l":"Overflow add tank","t":"DPS warrior or feral in tank gear for extra adds"},{"l":"Orb controller","t":"Controls Razorgore to destroy the eggs"},{"l":"Backup orb controller","t":"Takes over when the controller's debuff stops them"}]},{"h":"HEALERS","slots":[{"l":"MT heals","d":"MTH1","t":"Razorgore tank in phase 2; orb controller in phase 1"},{"l":"MT heals","d":"MTH2"},{"l":"MT heals","d":"MTH3"},{"l":"Left side tank","d":"OT1H"},{"l":"Right side tank","d":"OT2H"},{"l":"Raid heals","d":"RH1"},{"l":"Raid heals","d":"RH2"}]}],"notes":["Phase 1: the orb controller has Razorgore destroy all 30 eggs while adds pour in from both sides.","Kill Blackwing Mages first (they AoE), tank Dragonspawn and Legionnaires away from the raid.","Phase 2 starts when the last egg breaks: adds despawn and Razorgore is tanked in a corner."]},{"name":"Vaelastrasz the Corrupt","secs":[{"h":"TANKS (taunt rotation)","slots":[{"l":"Tank 1","d":"MT","m":"Skull","t":"Runs out when Burning Adrenaline hits"},{"l":"Tank 2","d":"OT1","t":"Taunts the moment Tank 1 gets Burning Adrenaline"},{"l":"Tank 3","d":"OT2","t":"Next in line after Tank 2"},{"l":"Tank 4 (backup)","t":"DPS warrior in tank gear"}]},{"h":"HEALERS (Essence of the Red = unlimited mana, spam heals)","slots":[{"l":"Tank heals","d":"MTH1"},{"l":"Tank heals","d":"MTH2"},{"l":"Tank heals","d":"MTH3"},{"l":"Tank heals","d":"OT1H"},{"l":"Raid heals","d":"OT2H"},{"l":"Raid heals","d":"RH1"},{"l":"Raid heals","d":"RH2"}]}],"notes":["Burning Adrenaline goes on a mana user every few seconds and on the tank about every 45s. That player runs away from the raid; they explode when it ends.","Everyone except the tank stays behind him (Cleave, Flame Breath)."]},{"name":"Broodlord Lashlayer","secs":[{"h":"TANKS","slots":[{"l":"Broodlord","d":"MT","m":"Skull","t":"Mortal Strike on the tank: keep topped"},{"l":"Second on threat","d":"OT1","t":"Knock Away drops threat; picks him up if MT gets knocked"}]},{"h":"HEALERS","slots":[{"l":"MT heals","d":"MTH1"},{"l":"MT heals","d":"MTH2"},{"l":"MT heals","d":"MTH3"},{"l":"OT heals","d":"OT1H"},{"l":"Raid heals","d":"RH1","t":"Blast Wave on melee"},{"l":"Raid heals","d":"RH2"},{"l":"Raid heals","d":"OT2H"}]},{"h":"SPECIAL","slots":[{"l":"Suppression device disarm","t":"Hallway before the boss"},{"l":"Suppression device disarm"}]}],"notes":["Pull him back to the raid; do not run into the suppression traps."]},{"name":"Firemaw","secs":[{"h":"TANKS","slots":[{"l":"Firemaw","d":"MT","m":"Skull","t":"Onyxia Scale Cloak"},{"l":"Second on threat","d":"OT1","t":"Wing Buffet drops threat: be ready to taunt"}]},{"h":"HEALERS (rotate behind the wall to drop Flame Buffet stacks)","slots":[{"l":"MT heals","d":"MTH1"},{"l":"MT heals","d":"MTH2"},{"l":"MT heals","d":"MTH3"},{"l":"OT heals","d":"OT1H"},{"l":"Raid heals","d":"RH1"},{"l":"Raid heals","d":"RH2"},{"l":"Raid heals","d":"OT2H"}]}],"notes":["Everyone needs an Onyxia Scale Cloak for Shadow Flame.","Flame Buffet stacks on anyone in line of sight: step behind the wall to drop stacks, then come back."]},{"name":"Ebonroc","secs":[{"h":"TANKS","slots":[{"l":"Ebonroc","d":"MT","m":"Skull","t":"Onyxia Scale Cloak"},{"l":"Taunt swap","d":"OT1","t":"Taunts the moment MT gets Shadow of Ebonroc"}]},{"h":"HEALERS","slots":[{"l":"MT heals","d":"MTH1"},{"l":"MT heals","d":"MTH2"},{"l":"OT heals","d":"MTH3"},{"l":"OT heals","d":"OT1H"},{"l":"Raid heals","d":"RH1"},{"l":"Raid heals","d":"RH2"},{"l":"Raid heals","d":"OT2H"}]}],"notes":["Shadow of Ebonroc on a tank heals him when he hits that tank: other tank taunts and holds until it falls off.","Onyxia Scale Cloak for everyone."]},{"name":"Flamegor","secs":[{"h":"TANKS","slots":[{"l":"Flamegor","d":"MT","m":"Skull"},{"l":"Second on threat","d":"OT1","t":"Wing Buffet drops threat"}]},{"h":"TRANQ ROTATION","slots":[{"l":"Tranq 1","t":"Tranquilizing Shot on Frenzy"},{"l":"Tranq 2","t":"Shoots if Tranq 1 misses or is on cooldown"},{"l":"Tranq 3","t":"Backup"}]},{"h":"HEALERS","slots":[{"l":"MT heals","d":"MTH1"},{"l":"MT heals","d":"MTH2"},{"l":"MT heals","d":"MTH3"},{"l":"OT heals","d":"OT1H"},{"l":"Raid heals","d":"RH1","t":"Fire Nova raid damage while Frenzied"},{"l":"Raid heals","d":"RH2"},{"l":"Raid heals","d":"OT2H"}]}],"notes":["Frenzy must be removed fast with Tranquilizing Shot; each Frenzy means more raid fire damage."]},{"name":"Chromaggus","secs":[{"h":"TANKS","slots":[{"l":"Chromaggus","d":"MT","m":"Skull"},{"l":"Backup tank","d":"OT1"}]},{"h":"TRANQ ROTATION","slots":[{"l":"Tranq 1","t":"Frenzy"},{"l":"Tranq 2"},{"l":"Tranq 3"}]},{"h":"AFFLICTION CLEANSE","slots":[{"l":"Black (curse)","t":"Mage / Druid"},{"l":"Black (curse)"},{"l":"Blue (magic)","t":"Priest / Paladin"},{"l":"Blue (magic)"},{"l":"Green (poison)","t":"Druid / Shaman / Paladin"},{"l":"Bronze","t":"Everyone uses Hourglass Sand on themselves; name who calls it"}]},{"h":"HEALERS","slots":[{"l":"MT heals","d":"MTH1"},{"l":"MT heals","d":"MTH2"},{"l":"MT heals","d":"MTH3"},{"l":"Raid heals","d":"OT1H"},{"l":"Raid heals","d":"OT2H"},{"l":"Raid heals","d":"RH1"},{"l":"Raid heals","d":"RH2"}]}],"notes":["Two breaths, different each week. Raid hides out of line of sight when he casts one.","Brood Afflictions: Black curse, Blue magic, Green poison, Bronze (Hourglass Sand), Red can't be removed. All five at once turns a player into a Drakonid.","Bronze this week? Make sure everyone has Hourglass Sand. Breaths this week:"]},{"name":"Nefarian","secs":[{"h":"TANKS","slots":[{"l":"Nefarian (phase 2+)","d":"MT","m":"Skull","t":"Face him away from the raid (Shadow Flame, Cleave)"},{"l":"Left side Drakonids","d":"OT1","m":"Cross","t":"Phase 1 adds"},{"l":"Right side Drakonids","d":"OT2","m":"Square","t":"Phase 1 adds"},{"l":"Extra add tank"}]},{"h":"HEALERS","slots":[{"l":"Nef tank heals","d":"MTH1"},{"l":"Nef tank heals","d":"MTH2"},{"l":"Nef tank heals","d":"MTH3"},{"l":"Left side","d":"OT1H"},{"l":"Right side","d":"OT2H"},{"l":"Raid heals","d":"RH1"},{"l":"Raid heals","d":"RH2"}]},{"h":"SPECIAL","slots":[{"l":"Tremor Totem","t":"Bellowing Roar fear"},{"l":"Tremor Totem (backup)"},{"l":"Fear Ward on MT","t":"If available"}]}],"notes":["Phase 1: Drakonids from both sides until enough die and Nefarian lands. Onyxia Scale Cloak for everyone.","Phase 2: class calls every ~30s. Warriors forced into Berserker Stance, Druids into cat form, Mages polymorph, Priests' heals hurt, Hunters' bows break, Rogues get pulled to him, Warlocks summon infernals, Shamans' totems spawn (kill them).","Phase 3 at 20%: dead Drakonids rise as skeletons. AoE/tank them; Bellowing Roar fear."]}],"AQ40":[{"name":"The Prophet Skeram","secs":[{"h":"TANKS","slots":[{"l":"Skeram","d":"MT","m":"Skull"},{"l":"Image (left)","m":"Cross"},{"l":"Image (right)","m":"Square"}]},{"h":"SPECIAL","slots":[{"l":"Interrupt 1","t":"Arcane Explosion"},{"l":"Interrupt 2"},{"l":"Interrupt 3"},{"l":"CC mind-controlled","t":"Polymorph MC'd players"}]},{"h":"HEALERS","slots":[{"l":"MT heals","d":"MTH1"},{"l":"MT heals","d":"MTH2"},{"l":"MT heals","d":"MTH3"},{"l":"OT heals"},{"l":"Raid heals"},{"l":"Raid heals"}]}],"notes":[]},{"name":"Bug Trio (Vem, Kri, Yauj)","secs":[{"h":"TANKS","slots":[{"l":"Vem"},{"l":"Kri"},{"l":"Yauj"},{"l":"Extra tank"}]},{"h":"SPECIAL","slots":[{"l":"Interrupt Yauj heal 1"},{"l":"Interrupt Yauj heal 2"},{"l":"Interrupt Yauj heal 3"}]},{"h":"HEALERS","slots":[{"l":"MT heals","d":"MTH1"},{"l":"MT heals","d":"MTH2"},{"l":"MT heals","d":"MTH3"},{"l":"OT heals"},{"l":"Raid heals"},{"l":"Raid heals"}]}],"notes":["Kill order:"]},{"name":"Battleguard Sartura","secs":[{"h":"TANKS","slots":[{"l":"Sartura","d":"MT","m":"Skull"},{"l":"Royal Guard 1"},{"l":"Royal Guard 2"},{"l":"Royal Guard 3"}]},{"h":"SPECIAL","slots":[{"l":"Stun 1"},{"l":"Stun 2"},{"l":"Stun 3"}]},{"h":"HEALERS","slots":[{"l":"MT heals","d":"MTH1"},{"l":"MT heals","d":"MTH2"},{"l":"MT heals","d":"MTH3"},{"l":"OT heals"},{"l":"Raid heals"},{"l":"Raid heals"}]}],"notes":[]},{"name":"Fankriss the Unyielding","secs":[{"h":"TANKS","slots":[{"l":"Fankriss","d":"MT","m":"Skull"},{"l":"Taunt swap","t":"Mortal Wound stacks"},{"l":"Worms / adds"},{"l":"Worms / adds"}]},{"h":"HEALERS","slots":[{"l":"MT heals","d":"MTH1"},{"l":"MT heals","d":"MTH2"},{"l":"MT heals","d":"MTH3"},{"l":"OT heals"},{"l":"Raid heals"},{"l":"Raid heals"}]}],"notes":[]},{"name":"Viscidus (optional)","secs":[{"h":"TANKS","slots":[{"l":"Viscidus","d":"MT","m":"Skull"},{"l":"Backup tank"}]},{"h":"SPECIAL","slots":[{"l":"Frost DPS lead"},{"l":"Poison cleanse"},{"l":"Poison cleanse"}]},{"h":"HEALERS","slots":[{"l":"MT heals","d":"MTH1"},{"l":"MT heals","d":"MTH2"},{"l":"MT heals","d":"MTH3"},{"l":"OT heals"},{"l":"Raid heals"},{"l":"Raid heals"}]}],"notes":[]},{"name":"Princess Huhuran","secs":[{"h":"TANKS","slots":[{"l":"Huhuran","d":"MT","m":"Skull"},{"l":"Backup tank"}]},{"h":"TRANQ ROTATION","slots":[{"l":"Tranq 1"},{"l":"Tranq 2"},{"l":"Tranq 3"}]},{"h":"HEALERS","slots":[{"l":"MT heals","d":"MTH1"},{"l":"MT heals","d":"MTH2"},{"l":"MT heals","d":"MTH3"},{"l":"OT heals"},{"l":"Raid heals"},{"l":"Raid heals"}]}],"notes":["Nature resistance needs:"]},{"name":"Twin Emperors","secs":[{"h":"TANKS","slots":[{"l":"Vek'nilash (left)"},{"l":"Vek'nilash (right)"},{"l":"Vek'lor (left)"},{"l":"Vek'lor (right)"},{"l":"Bug duty"}]},{"h":"HEALERS","slots":[{"l":"Left side"},{"l":"Left side"},{"l":"Left side"},{"l":"Right side"},{"l":"Right side"},{"l":"Right side"}]}],"notes":[]},{"name":"Ouro (optional)","secs":[{"h":"TANKS","slots":[{"l":"Ouro tank 1","d":"MT","m":"Skull"},{"l":"Ouro tank 2","t":"Sweep"},{"l":"Ouro tank 3"}]},{"h":"HEALERS","slots":[{"l":"MT heals","d":"MTH1"},{"l":"MT heals","d":"MTH2"},{"l":"MT heals","d":"MTH3"},{"l":"OT heals"},{"l":"Raid heals"},{"l":"Raid heals"}]}],"notes":[]},{"name":"C'Thun","secs":[{"h":"PHASE 1 POSITIONS","slots":[{"l":"Position 1"},{"l":"Position 2"},{"l":"Position 3"},{"l":"Position 4"},{"l":"Position 5"},{"l":"Position 6"},{"l":"Position 7"},{"l":"Position 8"}]},{"h":"PHASE 2","slots":[{"l":"Stomach team 1"},{"l":"Stomach team 2"},{"l":"Claw tentacle tank"},{"l":"Giant tentacle tank"}]},{"h":"HEALERS","slots":[{"l":"MT heals","d":"MTH1"},{"l":"MT heals","d":"MTH2"},{"l":"MT heals","d":"MTH3"},{"l":"OT heals"},{"l":"Raid heals"},{"l":"Raid heals"}]}],"notes":[]}]}
+;
+
+const CLASSES = {Warrior:'#C79C6E',Paladin:'#F58CBA',Hunter:'#ABD473',Rogue:'#FFF569',Priest:'#FFFFFF',Shaman:'#2E8BEA',Mage:'#69CCF0',Warlock:'#9482C9',Druid:'#FF7D0A'};
+const ROLES = ['Tank','Healer','Melee','Ranged'];
+const STATUS = ['Core','Rotation','Trial','Bench'];
+const MARKS = [
+  {k:'Skull',s:'☠',c:'#f2f2f2',w:'Kill first'},
+  {k:'Cross',s:'✖',c:'#e06666',w:'Kill second'},
+  {k:'Square',s:'■',c:'#6fa8dc',w:'Off-tank / kill third'},
+  {k:'Moon',s:'☾',c:'#c9daf8',w:'Polymorph'},
+  {k:'Triangle',s:'▲',c:'#93c47d',w:'Freezing Trap'},
+  {k:'Diamond',s:'◆',c:'#b4a7d6',w:'Banish / Shackle / Sleep'},
+  {k:'Circle',s:'●',c:'#f6b26b',w:'Extra tank / Sap'},
+  {k:'Star',s:'★',c:'#ffe599',w:'Spare / special'}
+];
+const MK = Object.fromEntries(MARKS.map(m=>[m.k,m]));
+const CORE = [
+  ['MT','Main Tank'],['OT1','Off Tank 1'],['OT2','Off Tank 2'],
+  ['MTH1','MT Healer 1 (main)'],['MTH2','MT Healer 2'],['MTH3','MT Healer 3'],
+  ['OT1H','OT1 Healer'],['OT2H','OT2 Healer'],['RH1','Raid Healer 1'],['RH2','Raid Healer 2']
+];
+const RAIDS = {BWL:{name:'Blackwing Lair',c:'#5a1a1a'},AQ40:{name:"Ahn'Qiraj (AQ40)",c:'#5a4514'}};
+const STORE = 'ashen-raid-planner-v1';
+
+function defaults(){
+  return {
+    v:1, date:'', lead:'',
+    roster: DATA.roster.map(r=>({n:r[0],c:r[1],r:r[2],st:r[3],out:!!r[4]})),
+    core:{MT:'Methl',OT1:'Dellz',OT2:'Xanthori',MTH1:'Cassyiskewl',MTH2:'Tyrivandril',MTH3:'Lavona',OT1H:'Nocktus',OT2H:'Whoville',RH1:'Dauerscalf',RH2:'Eko'},
+    mk:{Moon:'',Triangle:'',Diamond:'',Circle:'',Star:''},
+    groups: DATA.groups.map(g=>g.slice()),
+    a:{}, m:{}, notes:{}
+  };
+}
+
+let S = defaults();
+const UI = {tab:'BWL', q:'', collapsed:new Set(), sel:null};
+
+/* ---------- state helpers ---------- */
+const player = n => S.roster.find(p=>p.n===n);
+function slotKey(raid,b,s){return raid+'.'+b+'.'+s}
+function bossSlots(raid,b){
+  const out=[]; let i=0;
+  DATA[raid][b].secs.forEach(sec=>sec.slots.forEach(sl=>out.push({sl,key:slotKey(raid,b,i++)})));
+  return out;
+}
+function slotValue(key,sl){
+  if (key in S.a) return {n:S.a[key],inh:false};
+  if (sl.d) return {n:S.core[sl.d]||'',inh:true};
+  return {n:'',inh:false};
+}
+function slotMark(key,sl){ return key in S.m ? S.m[key] : (sl.m||''); }
+function mkValue(k){
+  if (k==='Skull') return {n:S.core.MT||'',inh:true};
+  if (k==='Cross') return {n:S.core.OT1||'',inh:true};
+  if (k==='Square') return {n:S.core.OT2||'',inh:true};
+  return {n:S.mk[k]||'',inh:false};
+}
+function slotDef(key){
+  const [raid,b,s]=key.split('.'); let i=0;
+  for (const sec of DATA[raid][+b].secs) for (const sl of sec.slots){ if (i++===+s) return sl; }
+  return {};
+}
+
+// target descriptor: {t:'core'|'grp'|'boss'|'mk', k}
+function getVal(t){
+  if (t.t==='core') return S.core[t.k]||'';
+  if (t.t==='grp'){const [g,i]=t.k.split('.'); return S.groups[g][i]||'';}
+  if (t.t==='boss') return slotValue(t.k,slotDef(t.k)).n;
+  if (t.t==='mk') return mkValue(t.k).n;
+  return '';
+}
+function setVal(t,n){
+  if (t.t==='core') S.core[t.k]=n;
+  else if (t.t==='grp'){const [g,i]=t.k.split('.'); S.groups[g][i]=n;}
+  else if (t.t==='boss') S.a[t.k]=n;
+  else if (t.t==='mk'){
+    if (t.k==='Skull') S.core.MT=n; else if (t.k==='Cross') S.core.OT1=n; else if (t.k==='Square') S.core.OT2=n; else S.mk[t.k]=n;
+  }
+}
+function removeFromGroups(n,except){
+  S.groups.forEach((g,gi)=>g.forEach((x,i)=>{ if (x===n && (gi+'.'+i)!==except) S.groups[gi][i]=''; }));
+}
+function sameTarget(a,b){return a&&b&&a.t===b.t&&a.k===b.k}
+
+function place(name, from, to){
+  if (!to) return;
+  if (to.t==='bench'){ if (from) setVal(from,''); commit(); return; }
+  if (sameTarget(from,to)) return;
+  const prev = getVal(to);
+  if (to.t==='grp') removeFromGroups(name,to.k);
+  setVal(to,name);
+  // dragging from one slot to another of the same kind swaps them
+  if (from && from.t===to.t){
+    if (from.t==='boss'){
+      const fr=from.k.split('.'), tr=to.k.split('.');
+      if (fr[0]===tr[0] && fr[1]===tr[1]) setVal(from,prev);
+    } else setVal(from,prev);
+  }
+  commit();
+}
+
+/* ---------- persistence ---------- */
+function packState(){
+  return {v:1,d:S.date,l:S.lead,
+    r:S.roster.map(p=>[p.n,p.c,p.r,p.st,p.out?1:0]),
+    c:S.core,k:S.mk,g:S.groups,a:S.a,m:S.m,n:S.notes};
+}
+function unpackState(o){
+  const s=defaults();
+  if (!o||o.v!==1) return s;
+  s.date=o.d||''; s.lead=o.l||'';
+  if (Array.isArray(o.r)) s.roster=o.r.map(r=>({n:String(r[0]),c:r[1],r:r[2],st:r[3]||'',out:!!r[4]}));
+  if (o.c) Object.assign(s.core,o.c);
+  if (o.k) Object.assign(s.mk,o.k);
+  if (Array.isArray(o.g)&&o.g.length===8) s.groups=o.g.map(g=>{g=(g||[]).slice(0,5); while(g.length<5) g.push(''); return g;});
+  s.a=o.a||{}; s.m=o.m||{}; s.n=undefined; s.notes=o.n||{};
+  return s;
+}
+const b64u = {
+  enc: bytes => { let s=''; for (let i=0;i<bytes.length;i+=0x8000) s+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000)); return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); },
+  dec: str => { str=str.replace(/-/g,'+').replace(/_/g,'/'); while(str.length%4) str+='='; const s=atob(str); const b=new Uint8Array(s.length); for(let i=0;i<s.length;i++) b[i]=s.charCodeAt(i); return b; }
+};
+async function streamBytes(bytes, stream){
+  const out = new Response(new Blob([bytes]).stream().pipeThrough(stream));
+  return new Uint8Array(await out.arrayBuffer());
+}
+async function encodeState(){
+  const raw = new TextEncoder().encode(JSON.stringify(packState()));
+  if ('CompressionStream' in window){
+    try { return 'z'+b64u.enc(await streamBytes(raw,new CompressionStream('deflate-raw'))); } catch(e){}
+  }
+  return 'j'+b64u.enc(raw);
+}
+async function decodeState(str){
+  const kind=str[0], body=b64u.dec(str.slice(1));
+  let bytes = body;
+  if (kind==='z') bytes = await streamBytes(body,new DecompressionStream('deflate-raw'));
+  return JSON.parse(new TextDecoder().decode(bytes));
+}
+let saveTimer=null;
+function commit(){
+  render();
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(saveLocal,250);
+}
+function saveLocal(){
+  try { localStorage.setItem(STORE, JSON.stringify(packState())); setSaved('Saved in this browser'); }
+  catch(e){ setSaved('Not saved (browser storage blocked). Use Copy share link.'); }
+}
+function setSaved(t){ document.getElementById('saved').textContent=t; }
+async function load(){
+  const h = location.hash.match(/[#&]p=([^&]+)/);
+  if (h){
+    try { S = unpackState(await decodeState(h[1])); setSaved('Loaded from share link'); saveLocal(); return; }
+    catch(e){ toast("That share link couldn't be read, so the saved plan is shown instead."); }
+  }
+  try { const raw=localStorage.getItem(STORE); if (raw){ S=unpackState(JSON.parse(raw)); setSaved('Saved in this browser'); } } catch(e){}
+}
+async function share(){
+  const code = await encodeState();
+  const url = location.origin+location.pathname+'#p='+code;
+  history.replaceState(null,'',url);
+  try { await navigator.clipboard.writeText(url); toast('Share link copied. Anyone who opens it sees this exact plan.'); }
+  catch(e){ prompt('Copy this link:',url); }
+}
+
+/* ---------- rendering ---------- */
+const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function chipHTML(n,opts={}){
+  const p = player(n);
+  const cc = p ? (CLASSES[p.c]||'#aaa') : '#e06666';
+  const cls = ['chip'];
+  if (!p) cls.push('unknown');
+  else if (p.out) cls.push('out');
+  if (UI.sel && UI.sel.n===n && sameTarget(UI.sel.from,opts.from)) cls.push('sel');
+  const title = p ? `${p.n} · ${p.c||'?'} ${p.r||''}${p.out?' · not attending':''}` : `${n} is not on the roster`;
+  const from = opts.from ? ` data-ft="${opts.from.t}" data-fk="${esc(opts.from.k)}"` : '';
+  return `<span class="${cls.join(' ')}" style="--cc:${cc}" data-n="${esc(n)}"${from} title="${esc(title)}"><span class="nm">${esc(n)}</span>${opts.badge?`<span class="ct">${esc(opts.badge)}</span>`:''}</span>`;
+}
+function dropHTML(t,val,inh,extra='',reset=''){
+  const filled = !!val;
+  const cls = ['drop']; if (filled) cls.push('filled'); if (filled&&inh) cls.push('inherit');
+  const inner = filled
+    ? chipHTML(val,{from:t}) + reset + `<button class="x" data-clear="${t.t}|${esc(t.k)}" title="Clear">×</button>`
+    : `<span class="empty">${extra||'Drop a name'}</span>` + (reset?`<span style="flex:1"></span>${reset}`:'');
+  return `<div class="${cls.join(' ')}" data-t="${t.t}" data-k="${esc(t.k)}"${inh&&filled?' title="Filled from Setup. Drop a name to change it for this boss only."':''}>${inner}</div>`;
+}
+function markSelect(key,cur){
+  const opts = ['<option value="">–</option>'].concat(MARKS.map(m=>`<option value="${m.k}"${cur===m.k?' selected':''}>${m.s}</option>`)).join('');
+  const c = cur && MK[cur] ? MK[cur].c : 'var(--faint)';
+  return `<select class="mk" data-mk="${esc(key)}" style="color:${c}" title="${cur?cur:'Raid mark'}">${opts}</select>`;
+}
+
+function counts(raid){
+  const c={};
+  const add=n=>{ if(n) c[n]=(c[n]||0)+1; };
+  if (raid){ DATA[raid].forEach((_,b)=>bossSlots(raid,b).forEach(({sl,key})=>add(slotValue(key,sl).n))); }
+  return c;
+}
+function groupOf(n){ for (let g=0;g<8;g++) if (S.groups[g].includes(n)) return g+1; return 0; }
+
+function renderBench(){
+  const q = UI.q.trim().toLowerCase();
+  const raid = (UI.tab==='BWL'||UI.tab==='AQ40') ? UI.tab : null;
+  const cnt = counts(raid);
+  let html='';
+  ROLES.concat(['Other']).forEach(role=>{
+    const ps = S.roster.filter(p=>(ROLES.includes(p.r)?p.r:'Other')===role && (!q || p.n.toLowerCase().includes(q) || (p.c||'').toLowerCase().includes(q)));
+    if (!ps.length) return;
+    html += `<div class="rgroup"><h4>${role==='Healer'?'Healers':role==='Tank'?'Tanks':role} · ${ps.filter(p=>!p.out).length}</h4><div class="chips">`;
+    ps.forEach(p=>{
+      let badge='';
+      if (raid) badge = cnt[p.n] ? String(cnt[p.n]) : '';
+      else if (UI.tab==='groups'){ const g=groupOf(p.n); badge = g ? 'G'+g : '–'; }
+      html += chipHTML(p.n,{badge});
+    });
+    html += '</div></div>';
+  });
+  if (!html) html='<p class="hint">No names match.</p>';
+  document.getElementById('benchlist').innerHTML = html;
+  document.getElementById('legend').innerHTML = Object.entries(CLASSES).map(([k,c])=>`<span><i style="background:${c}"></i>${k}</span>`).join('');
+}
+
+function renderTabs(){
+  const tabs=[['BWL','BWL bosses'],['AQ40','AQ40 bosses'],['setup','Tanks, healers & marks'],['groups','Raid groups'],['roster','Edit roster']];
+  document.getElementById('tabs').innerHTML = tabs.map(([k,l])=>`<button class="tab${UI.tab===k?' on':''}" data-tab="${k}">${l}</button>`).join('');
+}
+
+function renderRaid(raid){
+  const bosses = DATA[raid];
+  let html = `<div class="bossnav">${bosses.map((b,i)=>`<button data-jump="${raid}-${i}">${i+1}. ${esc(b.name.replace(/ \(.*\)$/,''))}</button>`).join('')}
+    <button data-expand="${raid}">Expand all</button><button data-collapse="${raid}">Collapse all</button></div>`;
+  bosses.forEach((b,bi)=>{
+    const id = raid+'-'+bi;
+    let si=0;
+    const secs = b.secs.map(sec=>{
+      const rows = sec.slots.map(sl=>{
+        const key=slotKey(raid,bi,si++);
+        const v=slotValue(key,sl);
+        const reset = (sl.d && key in S.a) ? `<button class="x" data-reset="${key}" title="Go back to the default from the Setup tab (${sl.d})">↺</button>` : '';
+        return `<div class="row"><div class="lb"${sl.t?` title="${esc(sl.t)}"`:''}>${esc(sl.l)}</div>${dropHTML({t:'boss',k:key},v.n,v.inh,'',reset)}${markSelect(key,slotMark(key,sl))}</div>`;
+      }).join('');
+      return `<div class="sec"><h5>${esc(sec.h)}</h5>${rows}</div>`;
+    }).join('');
+    const notes = b.notes.length ? `<ul class="notes">${b.notes.map(n=>`<li>${esc(n)}</li>`).join('')}</ul>` : '';
+    html += `<section class="card${UI.collapsed.has(id)?' collapsed':''}" id="${id}" style="--bossc:${RAIDS[raid].c}">
+      <div class="hd"><button class="caret" data-toggle="${id}" aria-label="Collapse">${UI.collapsed.has(id)?'▸':'▾'}</button>
+        <h2><span class="num">${bi+1}.</span> ${esc(b.name)}</h2>
+        <button class="btn small" data-copy="${raid}|${bi}" title="Copy assignments as text for raid chat or Discord">Copy text</button>
+        <button class="btn small ghost" data-clearboss="${raid}|${bi}" title="Clear this boss back to defaults">Clear</button></div>
+      <div class="bd"><div class="secs">${secs}</div>${notes}
+        <textarea class="free" data-note="${raid}.${bi}" placeholder="Notes for this week (breaths, kill order, positions…)">${esc(S.notes[raid+'.'+bi]||'')}</textarea></div>
+    </section>`;
+  });
+  return html;
+}
+
+function renderSetup(){
+  const core = CORE.map(([k,l])=>`<div class="mrow"><div class="mname">${esc(l)}</div>${dropHTML({t:'core',k},S.core[k]||'')}</div>`).join('');
+  const marks = MARKS.map(m=>{
+    const v=mkValue(m.k);
+    return `<div class="mrow"><div class="mname"><span class="mi" style="color:${m.c}">${m.s}</span><span>${m.k}<small>${esc(m.w)}</small></span></div>${dropHTML({t:'mk',k:m.k},v.n,false)}</div>`;
+  }).join('');
+  return `<div class="grid2">
+    <section class="card"><div class="hd"><h2>Tanks &amp; healers</h2></div><div class="bd">
+      <p class="hint">These fill every boss by default (shown with a dotted border). Change a boss slot to override it for that boss only.</p>${core}</div></section>
+    <section class="card"><div class="hd"><h2>Mark key</h2></div><div class="bd">
+      <p class="hint">Who handles each mark on trash. Skull, Cross and Square follow the MT, OT1 and OT2.</p>${marks}</div></section>
+  </div>`;
+}
+
+function renderGroups(){
+  let html='<div class="groups">';
+  S.groups.forEach((g,gi)=>{
+    const n=g.filter(Boolean).length;
+    html += `<div class="grp"><h4>Group ${gi+1}<span>${n} / 5</span></h4>`;
+    g.forEach((x,i)=>{ html += dropHTML({t:'grp',k:gi+'.'+i},x||''); });
+    html += '</div>';
+  });
+  html += '</div>';
+  const un = S.roster.filter(p=>!p.out && !groupOf(p.n));
+  html += `<section class="card ungrouped"><div class="hd"><h2>Not in a group yet · ${un.length}</h2>
+    <button class="btn small" id="b-autogroup" title="Put everyone not in a group into the first open slots">Fill open slots</button>
+    <button class="btn small ghost" id="b-cleargroups">Clear groups</button></div>
+    <div class="bd"><div class="chips">${un.length?un.map(p=>chipHTML(p.n)).join(''):'<span class="hint">Everyone attending has a group.</span>'}</div>
+    <p class="hint" style="margin-top:10px">Dropping a name into a group moves it out of any other group. Drag between slots to swap two players.</p></div></section>`;
+  return html;
+}
+
+function renderRoster(){
+  const opt=(list,cur)=>list.map(x=>`<option${x===cur?' selected':''}>${x}</option>`).join('');
+  const rows = S.roster.map((p,i)=>`<tr>
+    <td><div class="sw" style="background:${CLASSES[p.c]||'#666'}"></div></td>
+    <td><input class="nm" data-ri="${i}" data-f="n" value="${esc(p.n)}"></td>
+    <td><select data-ri="${i}" data-f="c">${opt(Object.keys(CLASSES),p.c)}</select></td>
+    <td><select data-ri="${i}" data-f="r">${opt(ROLES,p.r)}</select></td>
+    <td><select data-ri="${i}" data-f="st"><option value=""></option>${opt(STATUS,p.st)}</select></td>
+    <td style="text-align:center"><input type="checkbox" data-ri="${i}" data-f="in" ${p.out?'':'checked'} style="width:auto"></td>
+    <td><button class="x" data-del="${i}" title="Remove from roster">×</button></td></tr>`).join('');
+  return `<section class="card"><div class="hd"><h2>Edit roster · ${S.roster.length} players</h2>
+      <button class="btn small primary" id="b-add">Add player</button></div>
+    <div class="bd"><p class="hint">Untick "Attending" for anyone out this week. Their name is crossed out wherever it's assigned. Renaming a player updates every slot they're in.</p>
+    <div class="tablewrap"><table class="rt"><thead><tr><th></th><th>Name</th><th>Class</th><th>Role</th><th>Status</th><th>Attending</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div></section>`;
+}
+
+function render(){
+  renderTabs(); renderBench();
+  const m=document.getElementById('main');
+  if (UI.tab==='BWL'||UI.tab==='AQ40') m.innerHTML=renderRaid(UI.tab);
+  else if (UI.tab==='setup') m.innerHTML=renderSetup();
+  else if (UI.tab==='groups') m.innerHTML=renderGroups();
+  else m.innerHTML=renderRoster();
+  document.getElementById('f-date').value=S.date;
+  document.getElementById('f-lead').value=S.lead;
+  const sb=document.getElementById('selbar');
+  if (UI.sel){ sb.classList.add('on'); document.getElementById('seltext').textContent=`Tap a slot to place ${UI.sel.n}`; }
+  else sb.classList.remove('on');
+}
+
+/* ---------- text export ---------- */
+function bossText(raid,bi){
+  const b=DATA[raid][bi]; let si=0; const lines=[`${b.name}`];
+  b.secs.forEach(sec=>{
+    const rows=[];
+    sec.slots.forEach(sl=>{
+      const key=slotKey(raid,bi,si++); const v=slotValue(key,sl).n; const mk=slotMark(key,sl);
+      if (v) rows.push(`${mk?'{'+mk.toLowerCase()+'} ':''}${sl.l}: ${v}`);
+    });
+    if (rows.length) lines.push(sec.h.replace(/\s*\(.*\)$/,'')+': '+rows.join(' | '));
+  });
+  const note=S.notes[raid+'.'+bi]; if (note) lines.push('Notes: '+note.trim());
+  return lines.join('\n');
+}
+
+/* ---------- interaction ---------- */
+function toast(t){ const el=document.getElementById('toast'); el.textContent=t; el.classList.add('on'); clearTimeout(toast.t); toast.t=setTimeout(()=>el.classList.remove('on'),2600); }
+function targetOf(el){
+  const d = el && el.closest && el.closest('.drop,#bench');
+  if (!d) return null;
+  if (d.id==='bench') return {t:'bench'};
+  return {t:d.dataset.t,k:d.dataset.k};
+}
+function fromOf(chip){ return chip.dataset.ft ? {t:chip.dataset.ft,k:chip.dataset.fk} : null; }
+
+let drag=null; // {n,from,x0,y0,ghost,started,hi,touch,timer}
+function startPress(chip,x,y,touch){
+  drag={n:chip.dataset.n,from:fromOf(chip),x0:x,y0:y,started:false,touch,chip};
+  if (touch) drag.timer=setTimeout(()=>{ if (drag && !drag.started) beginDrag(x,y); },260);
+}
+function beginDrag(x,y){
+  drag.started=true;
+  const g=drag.chip.cloneNode(true); g.classList.add('dragghost'); g.classList.remove('sel');
+  document.body.appendChild(g); drag.ghost=g;
+  document.body.classList.add('dragging');
+  if (navigator.vibrate && drag.touch) navigator.vibrate(10);
+  moveDrag(x,y);
+}
+function moveDrag(x,y){
+  if (!drag) return;
+  if (!drag.started){
+    if (Math.hypot(x-drag.x0,y-drag.y0)>5){
+      if (drag.touch){ clearTimeout(drag.timer); drag=null; return; } // a swipe: let the page scroll
+      beginDrag(x,y);
+    } else return;
+  }
+  drag.ghost.style.left=x+'px'; drag.ghost.style.top=y+'px';
+  const el=document.elementFromPoint(x,y);
+  const d=el&&el.closest('.drop');
+  if (drag.hi && drag.hi!==d) drag.hi.classList.remove('hi');
+  if (d){ d.classList.add('hi'); drag.hi=d; } else drag.hi=null;
+  // auto-scroll near the window edges
+  const edge=60;
+  if (y<edge) window.scrollBy(0,-12); else if (y>innerHeight-edge) window.scrollBy(0,12);
+}
+function endDrag(x,y){
+  if (!drag) return;
+  clearTimeout(drag.timer);
+  const d=drag; drag=null;
+  if (!d.started){ tapChip(d.n,d.from); return; }
+  d.ghost.remove(); document.body.classList.remove('dragging');
+  if (d.hi) d.hi.classList.remove('hi');
+  const el=document.elementFromPoint(x,y);
+  const t=targetOf(el);
+  if (t) place(d.n,d.from,t);
+}
+function cancelDrag(){
+  if (!drag) return; clearTimeout(drag.timer);
+  if (drag.ghost) drag.ghost.remove(); document.body.classList.remove('dragging');
+  if (drag.hi) drag.hi.classList.remove('hi'); drag=null;
+}
+function tapChip(n,from){
+  if (UI.sel && UI.sel.n===n && sameTarget(UI.sel.from,from)){ UI.sel=null; render(); return; }
+  if (UI.sel && from){ // tapping a filled slot while holding a name: place it there
+    const s=UI.sel; UI.sel=null; place(s.n,s.from,from); return;
+  }
+  UI.sel={n,from}; render();
+}
+
+document.addEventListener('mousedown',e=>{
+  if (e.button!==0) return;
+  const chip=e.target.closest('.chip'); if (!chip || chip.classList.contains('dragghost')) return;
+  e.preventDefault(); startPress(chip,e.clientX,e.clientY,false);
+});
+document.addEventListener('mousemove',e=>{ if (drag) moveDrag(e.clientX,e.clientY); });
+document.addEventListener('mouseup',e=>{ if (drag) endDrag(e.clientX,e.clientY); });
+document.addEventListener('touchstart',e=>{
+  const chip=e.target.closest('.chip'); if (!chip || e.touches.length>1) return;
+  const t=e.touches[0]; startPress(chip,t.clientX,t.clientY,true);
+},{passive:true});
+document.addEventListener('touchmove',e=>{
+  if (!drag) return; const t=e.touches[0];
+  if (drag.started) e.preventDefault();
+  moveDrag(t.clientX,t.clientY);
+},{passive:false});
+document.addEventListener('touchend',e=>{
+  if (!drag) return; const t=e.changedTouches[0];
+  const started=drag.started; endDrag(t.clientX,t.clientY);
+  e.preventDefault(); // stop the synthetic click / mouse events
+  void started;
+},{passive:false});
+document.addEventListener('touchcancel',cancelDrag);
+document.addEventListener('contextmenu',e=>{ if (drag && drag.started) e.preventDefault(); });
+document.addEventListener('keydown',e=>{ if (e.key==='Escape'){ cancelDrag(); if (UI.sel){UI.sel=null; render();} } });
+
+document.addEventListener('click',e=>{
+  const el=e.target;
+  const tab=el.closest('[data-tab]'); if (tab){ UI.tab=tab.dataset.tab; render(); window.scrollTo(0,0); return; }
+  const clr=el.closest('[data-clear]'); if (clr){ const [t,k]=clr.dataset.clear.split('|'); setVal({t,k},''); commit(); return; }
+  const rs=el.closest('[data-reset]'); if (rs){ delete S.a[rs.dataset.reset]; commit(); return; }
+  const tg=el.closest('[data-toggle]'); if (tg){ const id=tg.dataset.toggle; UI.collapsed.has(id)?UI.collapsed.delete(id):UI.collapsed.add(id); render(); return; }
+  const jp=el.closest('[data-jump]'); if (jp){ const id=jp.dataset.jump; UI.collapsed.delete(id); render(); document.getElementById(id).scrollIntoView({behavior:'smooth',block:'start'}); return; }
+  const ex=el.closest('[data-expand]'); if (ex){ DATA[ex.dataset.expand].forEach((_,i)=>UI.collapsed.delete(ex.dataset.expand+'-'+i)); render(); return; }
+  const co=el.closest('[data-collapse]'); if (co){ DATA[co.dataset.collapse].forEach((_,i)=>UI.collapsed.add(co.dataset.collapse+'-'+i)); render(); return; }
+  const cp=el.closest('[data-copy]'); if (cp){ const [r,b]=cp.dataset.copy.split('|'); const txt=bossText(r,+b);
+    navigator.clipboard.writeText(txt).then(()=>toast('Copied. Marks like {skull} show as icons in WoW chat.'),()=>prompt('Copy:',txt)); return; }
+  const cb=el.closest('[data-clearboss]'); if (cb){ const [r,b]=cb.dataset.clearboss.split('|');
+    if (!confirm('Clear the changes on this boss and go back to the defaults?')) return;
+    const p=r+'.'+b+'.'; Object.keys(S.a).forEach(k=>{ if(k.startsWith(p)) delete S.a[k]; }); Object.keys(S.m).forEach(k=>{ if(k.startsWith(p)) delete S.m[k]; }); commit(); return; }
+  const del=el.closest('[data-del]'); if (del){ const p=S.roster[+del.dataset.del]; if (confirm(`Remove ${p.n} from the roster?`)){ S.roster.splice(+del.dataset.del,1); commit(); } return; }
+  if (el.closest('#b-add')){ let i=1; while(player('New player '+i)) i++; S.roster.push({n:'New player '+i,c:'Warrior',r:'Melee',st:'Rotation',out:false}); commit();
+    const inp=document.querySelectorAll('.rt input.nm'); const last=inp[inp.length-1]; if (last){ last.focus(); last.select(); } return; }
+  if (el.closest('#b-autogroup')){ const un=S.roster.filter(p=>!p.out&&!groupOf(p.n)).map(p=>p.n);
+    for (let g=0;g<8&&un.length;g++) for (let i=0;i<5&&un.length;i++) if (!S.groups[g][i]) S.groups[g][i]=un.shift();
+    commit(); if (un.length) toast(`No room for ${un.length} more.`); return; }
+  if (el.closest('#b-cleargroups')){ if (confirm('Empty all 8 groups?')){ S.groups=S.groups.map(g=>g.map(()=>'')); commit(); } return; }
+  if (el.closest('#b-share')){ share(); return; }
+  if (el.closest('#b-reset')){ if (confirm('Reset everything to the starting roster and assignments? Your current plan in this browser will be replaced.')){ S=defaults(); history.replaceState(null,'',location.pathname); commit(); toast('Reset to the starting plan.'); } return; }
+  if (el.closest('#selcancel')){ UI.sel=null; render(); return; }
+  // tap-to-place: a name is selected and an empty slot (or the roster panel) is tapped
+  if (UI.sel && !el.closest('.chip')){
+    const d=el.closest('.drop'); if (d){ const s=UI.sel; UI.sel=null; place(s.n,s.from,{t:d.dataset.t,k:d.dataset.k}); return; }
+    if (el.closest('#bench') && UI.sel.from){ const s=UI.sel; UI.sel=null; place(s.n,s.from,{t:'bench'}); return; }
+  }
+});
+
+document.addEventListener('change',e=>{
+  const el=e.target;
+  if (el.dataset.mk){ S.m[el.dataset.mk]=el.value; commit(); return; }
+  if (el.dataset.ri!==undefined){
+    const p=S.roster[+el.dataset.ri], f=el.dataset.f;
+    if (f==='n'){
+      const nn=el.value.trim(); if (!nn || (nn!==p.n && player(nn))){ toast(nn?`${nn} is already on the roster.`:'Name can’t be empty.'); render(); return; }
+      renamePlayer(p.n,nn);
+    } else if (f==='in') p.out=!el.checked;
+    else p[f]=el.value;
+    commit(); return;
+  }
+});
+document.addEventListener('input',e=>{
+  const el=e.target;
+  if (el.dataset.note){ S.notes[el.dataset.note]=el.value; clearTimeout(saveTimer); saveTimer=setTimeout(saveLocal,400); return; }
+  if (el.id==='q'){ UI.q=el.value; renderBench(); return; }
+  if (el.id==='f-date'){ S.date=el.value; clearTimeout(saveTimer); saveTimer=setTimeout(saveLocal,400); }
+  if (el.id==='f-lead'){ S.lead=el.value; clearTimeout(saveTimer); saveTimer=setTimeout(saveLocal,400); }
+});
+function renamePlayer(o,n){
+  const p=player(o); if (p) p.n=n;
+  for (const k in S.core) if (S.core[k]===o) S.core[k]=n;
+  for (const k in S.mk) if (S.mk[k]===o) S.mk[k]=n;
+  for (const k in S.a) if (S.a[k]===o) S.a[k]=n;
+  S.groups.forEach(g=>g.forEach((x,i)=>{ if (x===o) g[i]=n; }));
+}
+window.addEventListener('hashchange',async()=>{ await load(); render(); });
+
+load().then(render);
+</script>
+</body>
+</html>
