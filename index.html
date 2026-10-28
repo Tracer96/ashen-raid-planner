@@ -506,13 +506,34 @@ function commit(){
 }
 function saveLocal(){
   if (VIEW) return; // a view-only link never overwrites the viewer's own saved plan
+  if (LIVE.id){ // a live plan saves to the shared database, not over this browser's own plan
+    try { localStorage.setItem(STORE+'-maps', JSON.stringify(S.bassets||{})); } catch(e){}
+    if (LIVE.key) liveQueue(); return; }
   try { localStorage.setItem(STORE+'-maps', JSON.stringify(S.bassets||{})); } catch(e){}
   try { localStorage.setItem(STORE, JSON.stringify(packState())); setSaved('Saved in this browser'); }
   catch(e){ setSaved('Not saved (browser storage blocked). Use Copy share link.'); }
 }
 function setSaved(t){ document.getElementById('saved').textContent=t; }
 async function load(){
-  VIEW = /[#&]view=1(&|$)/.test(location.hash); document.body.classList.toggle('viewonly',VIEW);
+  liveStop();
+  VIEW = /[#&]view=1(&|$)/.test(location.hash);
+  let lv = location.hash.match(/[#&]live=([a-z0-9]+)/), lk = location.hash.match(/[#&]k=([a-z0-9]+)/);
+  if (!lv && !/[#&]p=/.test(location.hash)){ // plain address: reopen the live plan this browser last edited
+    try { const r=JSON.parse(localStorage.getItem(STORE+'-live')||'null'); if (r&&r.id){ lv=[0,r.id]; lk=r.k?[0,r.k]:null; } } catch(e){}
+  }
+  if (lv && LIVE_DB){
+    LIVE.id=lv[1]; LIVE.key=(!VIEW&&lk)?lk[1]:null; if (!LIVE.key) VIEW=true;
+    document.body.classList.toggle('viewonly',VIEW);
+    try { const r=await fetch(liveUrl('plans/'+LIVE.id+'/s')); const d=r.ok?await r.json():null;
+      if (!d||!d.d) throw new Error('missing');
+      S=unpackState(await decodeState(d.d)); LIVE.last=d.d; loadMapAssets();
+      if (LIVE.key) rememberLive();
+      setSaved(VIEW?'Live plan · updates automatically':'Live plan · shared with your edit links');
+      const w=location.hash.match(/[#&]who=([^&]+)/); if (w){ UI.who=decodeURIComponent(w[1]); UI.tab='player'; S.tabs.hidden=S.tabs.hidden.filter(x=>x!=='player'); }
+      liveListen(); return;
+    } catch(e){ toast("That live plan couldn't be loaded, so this browser's saved plan is shown instead."); liveForget(); VIEW=false; }
+  }
+  document.body.classList.toggle('viewonly',VIEW);
   const h = location.hash.match(/[#&]p=([^&]+)/);
   if (h){
     try { S = unpackState(await decodeState(h[1])); loadMapAssets(); setSaved('Loaded from share link');
@@ -527,20 +548,80 @@ async function load(){
 const BOARD_VER='1793215686';
 function loadMapAssets(){ try { S.bassets=JSON.parse(localStorage.getItem(STORE+'-maps')||'{}')||{}; } catch(e){ S.bassets={}; }  if (S.oldBoard){ S.bassets={}; try { localStorage.removeItem(STORE+'-maps'); } catch(e){} } }
 async function share(view){
-  const code = await encodeState();
-  const url = location.origin+location.pathname+'#p='+code+(view?'&view=1':'');
-  if (!view && !VIEW) history.replaceState(null,'',url);
+  const code = LIVE.id ? '' : await encodeState();
+  const url = LIVE.id ? liveLink(view) : location.origin+location.pathname+'#p='+code+(view?'&view=1':'');
+  if (!view && !VIEW && !LIVE.id) history.replaceState(null,'',url);
   const up = Object.keys(S.bassets||{}).length ? ' Note: images you uploaded onto maps stay in this browser only.' : '';
-  const msg = view ? 'View-only link copied. People who open it can see the plan but not change it.'
+  const msg = LIVE.id ? (view ? 'View-only link copied. It always shows the latest plan.' : 'Edit link copied. Anyone with it edits this same live plan.')
+            : view ? 'View-only link copied. People who open it can see the plan but not change it.'
                    : 'Edit link copied. People who open it can change their own copy of this plan.';
   try { await navigator.clipboard.writeText(url); toast(msg+up); }
   catch(e){ prompt('Copy this link:',url); }
 }
 function shareMenu(btn){
   const r=btn.getBoundingClientRect();
-  openMenu(r.left,r.bottom+4, (VIEW?'':'<button data-share="edit">Copy edit link<span class="sub">They can change assignments and maps</span></button>')+
-    '<button data-share="view">Copy view-only link<span class="sub">They can look but not change anything</span></button>');
+  if (LIVE.id){
+    openMenu(r.left,r.bottom+4, '<div class="lbl">Live plan</div>'+
+      (VIEW?'':'<button data-share="edit">Copy edit link<span class="sub">They edit this same plan, live</span></button>')+
+      '<button data-share="view">Copy view-only link<span class="sub">They see every change, but can\'t edit</span></button>'+
+      (VIEW?'':'<button data-live="leave">Leave live plan on this browser<span class="sub">Go back to this browser\'s own plan</span></button>'));
+    return; }
+  openMenu(r.left,r.bottom+4, (VIEW||!LIVE_DB?'':'<button data-live="start">Start a live shared plan<span class="sub">Everyone with the edit link edits one plan</span></button>')+
+    (VIEW?'':'<button data-share="edit">Copy edit link (snapshot)<span class="sub">They get their own copy to change</span></button>')+
+    '<button data-share="view">Copy view-only link (snapshot)<span class="sub">They can look but not change anything</span></button>');
 }
+/* ---------- live shared plan (Firebase Realtime Database over its REST API) ---------- */
+// The database URL, e.g. https://ashen-raid-planner-default-rtdb.firebaseio.com. Empty turns live plans off.
+const LIVE_DB = 'https://ashen-raid-planner-default-rtdb.firebaseio.com';
+// Anyone can read /plans/<id>/s. Writing /plans/<id> needs the edit key stored (unreadable) at /keys/<id>.
+const LIVE = {id:null, key:null, es:null, last:null, t:null, pt:null, me:rid(8)};
+function liveUrl(p){ return LIVE_DB.replace(/\/$/,'')+'/'+p+'.json'; }
+function rid(n){ const a=new Uint8Array(n); crypto.getRandomValues(a); return Array.from(a,x=>'abcdefghijkmnpqrstuvwxyz23456789'[x%32]).join(''); }
+function liveLink(view){ return location.origin+location.pathname+'#live='+LIVE.id+(view||!LIVE.key?'&view=1':'&k='+LIVE.key); }
+function rememberLive(){ try { localStorage.setItem(STORE+'-live',JSON.stringify({id:LIVE.id,k:LIVE.key})); } catch(e){} }
+function liveForget(){ liveStop(); try { localStorage.removeItem(STORE+'-live'); } catch(e){} }
+function liveStop(){ if (LIVE.es) LIVE.es.close(); clearTimeout(LIVE.t); clearTimeout(LIVE.pt); Object.assign(LIVE,{id:null,key:null,es:null,last:null}); }
+function liveQueue(){ clearTimeout(LIVE.t); LIVE.t=setTimeout(livePut,600); }
+async function livePut(){
+  if (!LIVE.id||!LIVE.key||VIEW) return false;
+  const code=await encodeState(); if (code===LIVE.last) return true;
+  try {
+    const r=await fetch(liveUrl('plans/'+LIVE.id),{method:'PUT',body:JSON.stringify({k:LIVE.key,s:{d:code,t:Date.now(),u:LIVE.me}})});
+    if (!r.ok) throw new Error(r.status);
+    LIVE.last=code; setSaved('Live · saved for everyone'); return true;
+  } catch(e){ setSaved('Not saved yet · retrying'); clearTimeout(LIVE.t); LIVE.t=setTimeout(livePut,5000); return false; }
+}
+// apply a change someone else saved; wait if this person is in the middle of typing or dragging
+async function liveApply(d){
+  if (!d||!d.d||d.u===LIVE.me||d.d===LIVE.last) return;
+  const a=document.activeElement;
+  if (drag||rdrag||(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)&&a.id!=='q'&&a.id!=='who')){ clearTimeout(LIVE.pt); LIVE.pt=setTimeout(()=>liveApply(d),1200); return; }
+  try {
+    const before=JSON.stringify(S.board), assets=S.bassets;
+    S=unpackState(await decodeState(d.d)); S.bassets=assets; LIVE.last=d.d; clearTimeout(LIVE.t);
+    render(); if (JSON.stringify(S.board)!==before) mapFrames().forEach(f=>sendLoad(f.contentWindow));
+    setSaved('Live · updated '+new Date(d.t||Date.now()).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}));
+  } catch(e){}
+}
+function liveListen(){
+  const es=new EventSource(liveUrl('plans/'+LIVE.id+'/s')); LIVE.es=es;
+  const on=e=>{ let m; try { m=JSON.parse(e.data); } catch(_){ return; }
+    if (!m) return;
+    if (m.path==='/' && e.type==='put') liveApply(m.data);
+    else fetch(liveUrl('plans/'+LIVE.id+'/s')).then(r=>r.json()).then(liveApply).catch(()=>{}); };
+  es.addEventListener('put',on); es.addEventListener('patch',on);
+}
+async function liveStart(){
+  const id=rid(10), key=rid(24);
+  try { const r=await fetch(liveUrl('keys/'+id),{method:'PUT',body:JSON.stringify(key)}); if (!r.ok) throw new Error(r.status); }
+  catch(e){ toast("Couldn't start a live plan. Check your connection and try again."); return; }
+  LIVE.id=id; LIVE.key=key; LIVE.last=null;
+  if (!await livePut()){ toast("Couldn't save the live plan. It will keep retrying."); }
+  rememberLive(); history.replaceState(null,'',liveLink(false)); liveListen(); render();
+  try { await navigator.clipboard.writeText(liveLink(false)); toast('Live plan started and edit link copied. Everyone with it edits this one plan.'); }
+  catch(e){ prompt('Live plan started. Copy the edit link:',liveLink(false)); }
+}
+
 // view-only: lock every field except the roster filter and the player picker
 function lockInputs(){ if (!VIEW) return;
   document.querySelectorAll('input,select,textarea').forEach(el=>{ if (el.id!=='q' && el.id!=='who') el.disabled=true; }); }
@@ -795,7 +876,7 @@ function renderPlayer(){
 }
 async function shareFor(n){
   const code=await encodeState();
-  const url=location.origin+location.pathname+'#p='+code+'&who='+encodeURIComponent(n)+(VIEW?'&view=1':'');
+  const url=(LIVE.id?liveLink(true):location.origin+location.pathname+'#p='+code+(VIEW?'&view=1':''))+'&who='+encodeURIComponent(n);
   try { await navigator.clipboard.writeText(url); toast(`Link copied. It opens straight to ${n}'s assignments.`); } catch(e){ prompt('Copy this link:',url); }
 }
 function renderRoster(){
@@ -1054,9 +1135,13 @@ document.addEventListener('click',e=>{
     for (let g=0;g<8&&un.length;g++) for (let i=0;i<5&&un.length;i++) if (!S.groups[g][i]) S.groups[g][i]=un.shift();
     commit(); if (un.length) toast(`No room for ${un.length} more.`); return; }
   if (el.closest('#b-cleargroups')){ if (confirm('Empty all 8 groups?')){ S.groups=S.groups.map(g=>g.map(()=>'')); commit(); } return; }
+  const lvb=el.closest('[data-live]'); if (lvb){ closeMenu();
+    if (lvb.dataset.live==='start') liveStart();
+    else { liveForget(); S=defaults(); history.replaceState(null,'',location.pathname); load().then(()=>{ render(); mapFrames().forEach(f=>sendLoad(f.contentWindow)); toast("Back to this browser's own plan. Your edit link still opens the live plan."); }); }
+    return; }
   const sh=el.closest('[data-share]'); if (sh){ closeMenu(); share(sh.dataset.share==='view'); return; }
   if (el.closest('#b-share')){ shareMenu(el.closest('#b-share')); return; }
-  if (el.closest('#b-reset')){ if (confirm('Reset everything to the starting roster and assignments? Your current plan in this browser will be replaced.')){ S=defaults(); history.replaceState(null,'',location.pathname); commit(); mapFrames().forEach(f=>sendLoad(f.contentWindow)); toast('Reset to the starting plan.'); } return; }
+  if (el.closest('#b-reset')){ if (confirm(LIVE.id?'Reset the live plan to the starting roster and assignments? This changes it for everyone.':'Reset everything to the starting roster and assignments? Your current plan in this browser will be replaced.')){ S=defaults(); if (!LIVE.id) history.replaceState(null,'',location.pathname); commit(); mapFrames().forEach(f=>sendLoad(f.contentWindow)); toast('Reset to the starting plan.'); } return; }
   if (el.closest('#b-addtoggle')){ const f=document.getElementById('addform'); f.hidden=!f.hidden; if (!f.hidden) document.getElementById('add-n').focus(); return; }
   if (el.closest('#selcancel')){ UI.sel=null; render(); return; }
   // tap-to-place: a name is selected and an empty slot (or the roster panel) is tapped

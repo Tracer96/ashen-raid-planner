@@ -1,0 +1,15 @@
+{
+  "rules": {
+    "keys": {
+      "$id": {
+        ".write": "!data.exists() && newData.isString() && newData.val().length >= 20"
+      }
+    },
+    "plans": {
+      "$id": {
+        ".write": "root.child('keys').child($id).exists() && newData.child('k').val() === root.child('keys').child($id).val()",
+        "s": { ".read": true }
+      }
+    }
+  }
+}
