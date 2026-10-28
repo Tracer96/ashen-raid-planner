@@ -49,6 +49,18 @@ header{position:sticky;top:0;z-index:30;background:rgba(15,17,21,.94);backdrop-f
 aside{position:sticky;top:104px;align-self:start;max-height:calc(100vh - 120px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px}
 aside h3{margin:0 0 4px;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
 .hint{font-size:12px;color:var(--faint);margin:0 0 10px}
+.addform{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px;margin-bottom:10px;display:grid;gap:6px}
+.addform input,.addform select{background:#14171d;border:1px solid var(--line);border-radius:6px;padding:5px 7px;min-width:0}
+.addrow{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.addrow .btn{grid-column:1/-1}
+.sitout{margin:0 0 10px;color:#e0a066}
+.bx{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:4px 14px;padding:8px 4px 12px}
+.bx h6{grid-column:1/-1;margin:6px 0 2px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--accent)}
+.bx label{display:flex;gap:7px;align-items:center;font-size:13px;cursor:pointer}
+.bx input{width:auto}
+.bxbtn{background:#14171d;border:1px solid var(--line);border-radius:6px;padding:4px 8px;font-size:12px;white-space:nowrap;color:var(--muted)}
+.bxbtn.skip{color:#e0a066;border-color:#5a4026}
+.bxbtn:hover{border-color:var(--accent)}
 .search{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px 9px;margin-bottom:10px}
 .rgroup{margin-bottom:10px}
 .rgroup h4{margin:0 0 6px;font-size:11px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.08em}
@@ -79,9 +91,16 @@ body.dragging .drop{background:var(--drop)}
 .caret{background:none;border:none;color:var(--muted);font-size:14px;padding:2px 6px}
 .secs{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px}
 .sec h5{margin:0 0 6px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
-.row{display:grid;grid-template-columns:minmax(90px,1fr) minmax(120px,1.25fr) 44px;gap:6px;align-items:center;margin-bottom:5px}
-.row .lb{font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.row .lb[title]{text-decoration:underline dotted var(--faint);text-underline-offset:3px}
+.row{display:grid;grid-template-columns:minmax(110px,1.2fr) minmax(120px,1fr) 44px 20px;gap:6px;align-items:center;margin-bottom:5px}
+input.lb,input.sech{min-width:0;width:100%;background:transparent;border:1px solid transparent;border-radius:6px;padding:4px 6px;margin-left:-6px;font-size:13px;color:var(--text);text-overflow:ellipsis}
+input.lb:hover,input.sech:hover{border-color:var(--line2);background:#14171d}
+input.lb:focus,input.sech:focus{outline:none;border-color:var(--accent);background:#14171d}
+input.sech{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);padding:2px 6px;margin-bottom:4px}
+.row .rm{opacity:0;padding:2px 4px}
+.row:hover .rm,.row .rm:focus{opacity:1}
+@media (hover:none){.row .rm{opacity:.6}}
+.addslot{background:none;border:1px dashed var(--line2);border-radius:7px;color:var(--faint);font-size:12px;padding:3px 10px;margin-top:2px}
+.addslot:hover{color:var(--accent2);border-color:var(--accent)}
 .drop{min-height:30px;border:1px dashed var(--line2);border-radius:7px;padding:2px;display:flex;align-items:center;gap:4px;background:#14171d;transition:background .1s}
 .drop.filled{border-style:solid;border-color:#2c3240}
 .drop .chip{flex:1;min-width:0}
@@ -138,7 +157,7 @@ table.rt{width:100%;border-collapse:collapse;font-size:13px}
 }
 @media (max-width:420px){
   .secs{grid-template-columns:1fr}
-  .row{grid-template-columns:minmax(80px,1fr) minmax(110px,1.3fr) 40px}
+  .row{grid-template-columns:minmax(80px,1fr) minmax(110px,1.3fr) 40px 18px}
 }
 </style>
 </head>
@@ -162,6 +181,10 @@ table.rt{width:100%;border-collapse:collapse;font-size:13px}
   <aside id="bench">
     <h3>Roster</h3>
     <p class="hint">Drag a name onto any slot. On a phone, tap a name and then tap a slot. Drag a name back here to clear a slot.</p>
+    <form class="addform" id="addform" autocomplete="off">
+      <input id="add-n" placeholder="New member name" maxlength="24">
+      <div class="addrow"><select id="add-c"></select><select id="add-r"></select><button class="btn small primary" type="submit">Add member</button></div>
+    </form>
     <input class="search" id="q" placeholder="Filter names…">
     <div id="benchlist"></div>
     <div class="legend" id="legend"></div>
@@ -201,25 +224,33 @@ const STORE = 'ashen-raid-planner-v1';
 function defaults(){
   return {
     v:1, date:'', lead:'',
-    roster: DATA.roster.map(r=>({n:r[0],c:r[1],r:r[2],st:r[3],out:!!r[4]})),
+    roster: DATA.roster.map(r=>({n:r[0],c:r[1],r:r[2],st:r[3],out:!!r[4],x:[]})),
     core:{MT:'Methl',OT1:'Dellz',OT2:'Xanthori',MTH1:'Cassyiskewl',MTH2:'Tyrivandril',MTH3:'Lavona',OT1H:'Nocktus',OT2H:'Whoville',RH1:'Dauerscalf',RH2:'Eko'},
     mk:{Moon:'',Triangle:'',Diamond:'',Circle:'',Star:''},
     groups: DATA.groups.map(g=>g.slice()),
-    a:{}, m:{}, notes:{}
+    a:{}, m:{}, notes:{}, lb:{}, cx:{}, hide:{}, cn:0
   };
 }
 
 let S = defaults();
-const UI = {tab:'BWL', q:'', collapsed:new Set(), sel:null};
+const UI = {tab:'BWL', q:'', collapsed:new Set(), sel:null, bossEdit:null};
 
 /* ---------- state helpers ---------- */
 const player = n => S.roster.find(p=>p.n===n);
 function slotKey(raid,b,s){return raid+'.'+b+'.'+s}
-function bossSlots(raid,b){
-  const out=[]; let i=0;
-  DATA[raid][b].secs.forEach(sec=>sec.slots.forEach(sl=>out.push({sl,key:slotKey(raid,b,i++)})));
-  return out;
+// sections of a boss with built-in slots (minus removed ones) plus rows added on the page
+function bossSecs(raid,b){
+  let i=0;
+  return DATA[raid][b].secs.map((sec,si)=>{
+    const hk=raid+'.'+b+'.h'+si;
+    const slots=[];
+    sec.slots.forEach(sl=>{ const key=slotKey(raid,b,i++); if (!S.hide[key]) slots.push({sl,key,custom:false}); });
+    (S.cx[raid+'.'+b+'.'+si]||[]).forEach(key=>slots.push({sl:{l:'New job'},key,custom:true}));
+    return {h:S.lb[hk]??sec.h,hk,si,slots};
+  });
 }
+function bossSlots(raid,b){ return bossSecs(raid,b).flatMap(sec=>sec.slots); }
+const slotLabel = (key,sl) => S.lb[key]??sl.l;
 function slotValue(key,sl){
   if (key in S.a) return {n:S.a[key],inh:false};
   if (sl.d) return {n:S.core[sl.d]||'',inh:true};
@@ -234,6 +265,7 @@ function mkValue(k){
 }
 function slotDef(key){
   const [raid,b,s]=key.split('.'); let i=0;
+  if (s[0]==='c') return {l:'New job'};
   for (const sec of DATA[raid][+b].secs) for (const sl of sec.slots){ if (i++===+s) return sl; }
   return {};
 }
@@ -279,18 +311,18 @@ function place(name, from, to){
 /* ---------- persistence ---------- */
 function packState(){
   return {v:1,d:S.date,l:S.lead,
-    r:S.roster.map(p=>[p.n,p.c,p.r,p.st,p.out?1:0]),
-    c:S.core,k:S.mk,g:S.groups,a:S.a,m:S.m,n:S.notes};
+    r:S.roster.map(p=>p.x&&p.x.length?[p.n,p.c,p.r,p.st,p.out?1:0,p.x]:[p.n,p.c,p.r,p.st,p.out?1:0]),
+    c:S.core,k:S.mk,g:S.groups,a:S.a,m:S.m,n:S.notes,b:S.lb,x:S.cx,h:S.hide,cn:S.cn};
 }
 function unpackState(o){
   const s=defaults();
   if (!o||o.v!==1) return s;
   s.date=o.d||''; s.lead=o.l||'';
-  if (Array.isArray(o.r)) s.roster=o.r.map(r=>({n:String(r[0]),c:r[1],r:r[2],st:r[3]||'',out:!!r[4]}));
+  if (Array.isArray(o.r)) s.roster=o.r.map(r=>({n:String(r[0]),c:r[1],r:r[2],st:r[3]||'',out:!!r[4],x:Array.isArray(r[5])?r[5]:[]}));
   if (o.c) Object.assign(s.core,o.c);
   if (o.k) Object.assign(s.mk,o.k);
   if (Array.isArray(o.g)&&o.g.length===8) s.groups=o.g.map(g=>{g=(g||[]).slice(0,5); while(g.length<5) g.push(''); return g;});
-  s.a=o.a||{}; s.m=o.m||{}; s.n=undefined; s.notes=o.n||{};
+  s.a=o.a||{}; s.m=o.m||{}; s.n=undefined; s.notes=o.n||{}; s.lb=o.b||{}; s.cx=o.x||{}; s.hide=o.h||{}; s.cn=o.cn||0;
   return s;
 }
 const b64u = {
@@ -349,8 +381,11 @@ function chipHTML(n,opts={}){
   const cls = ['chip'];
   if (!p) cls.push('unknown');
   else if (p.out) cls.push('out');
+  const boss = opts.from && opts.from.t==='boss' ? opts.from.k.split('.').slice(0,2).join('.') : null;
+  const skips = p && boss && p.x && p.x.includes(boss);
+  if (skips) cls.push('out');
   if (UI.sel && UI.sel.n===n && sameTarget(UI.sel.from,opts.from)) cls.push('sel');
-  const title = p ? `${p.n} · ${p.c||'?'} ${p.r||''}${p.out?' · not attending':''}` : `${n} is not on the roster`;
+  const title = p ? `${p.n} · ${p.c||'?'} ${p.r||''}${p.out?' · not attending':''}${skips?' · sitting out this boss':''}` : `${n} is not on the roster`;
   const from = opts.from ? ` data-ft="${opts.from.t}" data-fk="${esc(opts.from.k)}"` : '';
   return `<span class="${cls.join(' ')}" style="--cc:${cc}" data-n="${esc(n)}"${from} title="${esc(title)}"><span class="nm">${esc(n)}</span>${opts.badge?`<span class="ct">${esc(opts.badge)}</span>`:''}</span>`;
 }
@@ -399,7 +434,7 @@ function renderBench(){
 }
 
 function renderTabs(){
-  const tabs=[['BWL','BWL bosses'],['AQ40','AQ40 bosses'],['setup','Tanks, healers & marks'],['groups','Raid groups'],['roster','Edit roster']];
+  const tabs=[['BWL','BWL bosses'],['AQ40','AQ40 bosses'],['setup','Tanks, healers & marks'],['groups','Raid groups'],['roster','Roster & bosses']];
   document.getElementById('tabs').innerHTML = tabs.map(([k,l])=>`<button class="tab${UI.tab===k?' on':''}" data-tab="${k}">${l}</button>`).join('');
 }
 
@@ -409,23 +444,24 @@ function renderRaid(raid){
     <button data-expand="${raid}">Expand all</button><button data-collapse="${raid}">Collapse all</button></div>`;
   bosses.forEach((b,bi)=>{
     const id = raid+'-'+bi;
-    let si=0;
-    const secs = b.secs.map(sec=>{
-      const rows = sec.slots.map(sl=>{
-        const key=slotKey(raid,bi,si++);
+    const secs = bossSecs(raid,bi).map(sec=>{
+      const rows = sec.slots.map(({sl,key})=>{
         const v=slotValue(key,sl);
         const reset = (sl.d && key in S.a) ? `<button class="x" data-reset="${key}" title="Go back to the default from the Setup tab (${sl.d})">↺</button>` : '';
-        return `<div class="row"><div class="lb"${sl.t?` title="${esc(sl.t)}"`:''}>${esc(sl.l)}</div>${dropHTML({t:'boss',k:key},v.n,v.inh,'',reset)}${markSelect(key,slotMark(key,sl))}</div>`;
+        return `<div class="row"><input class="lb" data-lb="${key}" value="${esc(slotLabel(key,sl))}" placeholder="${esc(sl.l)}"${sl.t?` title="${esc(sl.t)}"`:' title="Click to rename"'}>${dropHTML({t:'boss',k:key},v.n,v.inh,'',reset)}${markSelect(key,slotMark(key,sl))}<button class="x rm" data-rmslot="${key}" title="Remove this row">−</button></div>`;
       }).join('');
-      return `<div class="sec"><h5>${esc(sec.h)}</h5>${rows}</div>`;
+      return `<div class="sec"><input class="sech" data-lb="${sec.hk}" value="${esc(sec.h)}" title="Click to rename">${rows}<button class="addslot" data-addslot="${raid}.${bi}.${sec.si}">+ Add row</button></div>`;
     }).join('');
+    const sitting = S.roster.filter(p=>!p.out && p.x && p.x.includes(raid+'.'+bi)).map(p=>p.n);
+    const sitHTML = sitting.length ? `<p class="hint sitout">Sitting out: ${sitting.map(esc).join(', ')}</p>` : '';
     const notes = b.notes.length ? `<ul class="notes">${b.notes.map(n=>`<li>${esc(n)}</li>`).join('')}</ul>` : '';
     html += `<section class="card${UI.collapsed.has(id)?' collapsed':''}" id="${id}" style="--bossc:${RAIDS[raid].c}">
       <div class="hd"><button class="caret" data-toggle="${id}" aria-label="Collapse">${UI.collapsed.has(id)?'▸':'▾'}</button>
         <h2><span class="num">${bi+1}.</span> ${esc(b.name)}</h2>
         <button class="btn small" data-copy="${raid}|${bi}" title="Copy assignments as text for raid chat or Discord">Copy text</button>
+        ${Object.keys(S.hide).some(k=>k.startsWith(raid+'.'+bi+'.'))?`<button class="btn small ghost" data-restore="${raid}.${bi}">Restore rows</button>`:''}
         <button class="btn small ghost" data-clearboss="${raid}|${bi}" title="Clear this boss back to defaults">Clear</button></div>
-      <div class="bd"><div class="secs">${secs}</div>${notes}
+      <div class="bd">${sitHTML}<div class="secs">${secs}</div>${notes}
         <textarea class="free" data-note="${raid}.${bi}" placeholder="Notes for this week (breaths, kill order, positions…)">${esc(S.notes[raid+'.'+bi]||'')}</textarea></div>
     </section>`;
   });
@@ -464,6 +500,15 @@ function renderGroups(){
   return html;
 }
 
+function bossPicker(p,i){
+  let h=`<tr><td></td><td colspan="7"><div class="bx">`;
+  Object.keys(RAIDS).forEach(raid=>{
+    h+=`<h6>${RAIDS[raid].name} <button class="btn small ghost" data-bxall="${i}|${raid}|1">All</button> <button class="btn small ghost" data-bxall="${i}|${raid}|0">None</button></h6>`;
+    DATA[raid].forEach((b,bi)=>{ const id=raid+'.'+bi;
+      h+=`<label><input type="checkbox" data-bx="${i}|${id}" ${p.x&&p.x.includes(id)?'':'checked'}>${bi+1}. ${esc(b.name)}</label>`; });
+  });
+  return h+'</div></td></tr>';
+}
 function renderRoster(){
   const opt=(list,cur)=>list.map(x=>`<option${x===cur?' selected':''}>${x}</option>`).join('');
   const rows = S.roster.map((p,i)=>`<tr>
@@ -473,11 +518,12 @@ function renderRoster(){
     <td><select data-ri="${i}" data-f="r">${opt(ROLES,p.r)}</select></td>
     <td><select data-ri="${i}" data-f="st"><option value=""></option>${opt(STATUS,p.st)}</select></td>
     <td style="text-align:center"><input type="checkbox" data-ri="${i}" data-f="in" ${p.out?'':'checked'} style="width:auto"></td>
-    <td><button class="x" data-del="${i}" title="Remove from roster">×</button></td></tr>`).join('');
+    <td><button class="bxbtn${p.x&&p.x.length?' skip':''}" data-bossedit="${i}">${p.x&&p.x.length?`Skips ${p.x.length}`:'All bosses'} ${UI.bossEdit===i?'▴':'▾'}</button></td>
+    <td><button class="x" data-del="${i}" title="Remove from roster">×</button></td></tr>${UI.bossEdit===i?bossPicker(p,i):''}`).join('');
   return `<section class="card"><div class="hd"><h2>Edit roster · ${S.roster.length} players</h2>
       <button class="btn small primary" id="b-add">Add player</button></div>
-    <div class="bd"><p class="hint">Untick "Attending" for anyone out this week. Their name is crossed out wherever it's assigned. Renaming a player updates every slot they're in.</p>
-    <div class="tablewrap"><table class="rt"><thead><tr><th></th><th>Name</th><th>Class</th><th>Role</th><th>Status</th><th>Attending</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div></section>`;
+    <div class="bd"><p class="hint">Untick "Attending" for anyone out this week. Their name is crossed out wherever it's assigned. Renaming a player updates every slot they're in. Use "Bosses" to pick which fights someone is in for; they show crossed out on the bosses they skip.</p>
+    <div class="tablewrap"><table class="rt"><thead><tr><th></th><th>Name</th><th>Class</th><th>Role</th><th>Status</th><th>Attending</th><th>Bosses</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div></section>`;
 }
 
 function render(){
@@ -496,12 +542,12 @@ function render(){
 
 /* ---------- text export ---------- */
 function bossText(raid,bi){
-  const b=DATA[raid][bi]; let si=0; const lines=[`${b.name}`];
-  b.secs.forEach(sec=>{
+  const b=DATA[raid][bi]; const lines=[`${b.name}`];
+  bossSecs(raid,bi).forEach(sec=>{
     const rows=[];
-    sec.slots.forEach(sl=>{
-      const key=slotKey(raid,bi,si++); const v=slotValue(key,sl).n; const mk=slotMark(key,sl);
-      if (v) rows.push(`${mk?'{'+mk.toLowerCase()+'} ':''}${sl.l}: ${v}`);
+    sec.slots.forEach(({sl,key})=>{
+      const v=slotValue(key,sl).n; const mk=slotMark(key,sl);
+      if (v) rows.push(`${mk?'{'+mk.toLowerCase()+'} ':''}${slotLabel(key,sl)}: ${v}`);
     });
     if (rows.length) lines.push(sec.h.replace(/\s*\(.*\)$/,'')+': '+rows.join(' | '));
   });
@@ -597,6 +643,7 @@ document.addEventListener('touchend',e=>{
 },{passive:false});
 document.addEventListener('touchcancel',cancelDrag);
 document.addEventListener('contextmenu',e=>{ if (drag && drag.started) e.preventDefault(); });
+document.addEventListener('keydown',e=>{ if (e.key==='Enter' && e.target.dataset && e.target.dataset.lb){ e.target.blur(); return; } });
 document.addEventListener('keydown',e=>{ if (e.key==='Escape'){ cancelDrag(); if (UI.sel){UI.sel=null; render();} } });
 
 document.addEventListener('click',e=>{
@@ -613,8 +660,18 @@ document.addEventListener('click',e=>{
   const cb=el.closest('[data-clearboss]'); if (cb){ const [r,b]=cb.dataset.clearboss.split('|');
     if (!confirm('Clear the changes on this boss and go back to the defaults?')) return;
     const p=r+'.'+b+'.'; Object.keys(S.a).forEach(k=>{ if(k.startsWith(p)) delete S.a[k]; }); Object.keys(S.m).forEach(k=>{ if(k.startsWith(p)) delete S.m[k]; }); commit(); return; }
+  const as=el.closest('[data-addslot]'); if (as){ const sk=as.dataset.addslot; const [r,b]=sk.split('.'); const key=`${r}.${b}.c${++S.cn}`;
+    (S.cx[sk]=S.cx[sk]||[]).push(key); commit(); const inp=document.querySelector(`[data-lb="${key}"]`); if (inp){ inp.focus(); inp.select(); } return; }
+  const rm=el.closest('[data-rmslot]'); if (rm){ const key=rm.dataset.rmslot; const [r,b,i]=key.split('.');
+    if (i[0]==='c'){ for (const sk in S.cx) S.cx[sk]=S.cx[sk].filter(k=>k!==key); } else S.hide[key]=1;
+    delete S.a[key]; delete S.m[key]; delete S.lb[key]; commit();
+    toast('Row removed. "Restore rows" on the boss brings back the built-in ones.'); return; }
+  const rr=el.closest('[data-restore]'); if (rr){ const p=rr.dataset.restore+'.'; Object.keys(S.hide).forEach(k=>{ if(k.startsWith(p)) delete S.hide[k]; }); commit(); return; }
+  const be=el.closest('[data-bossedit]'); if (be){ const i=+be.dataset.bossedit; UI.bossEdit = UI.bossEdit===i?null:i; render(); return; }
+  const ba=el.closest('[data-bxall]'); if (ba){ const [i,raid,on]=ba.dataset.bxall.split('|'); const p=S.roster[+i]; p.x=(p.x||[]).filter(id=>!id.startsWith(raid+'.'));
+    if (on==='0') DATA[raid].forEach((_,bi)=>p.x.push(raid+'.'+bi)); commit(); return; }
   const del=el.closest('[data-del]'); if (del){ const p=S.roster[+del.dataset.del]; if (confirm(`Remove ${p.n} from the roster?`)){ S.roster.splice(+del.dataset.del,1); commit(); } return; }
-  if (el.closest('#b-add')){ let i=1; while(player('New player '+i)) i++; S.roster.push({n:'New player '+i,c:'Warrior',r:'Melee',st:'Rotation',out:false}); commit();
+  if (el.closest('#b-add')){ let i=1; while(player('New player '+i)) i++; S.roster.push({n:'New player '+i,c:'Warrior',r:'Melee',st:'Rotation',out:false,x:[]}); commit();
     const inp=document.querySelectorAll('.rt input.nm'); const last=inp[inp.length-1]; if (last){ last.focus(); last.select(); } return; }
   if (el.closest('#b-autogroup')){ const un=S.roster.filter(p=>!p.out&&!groupOf(p.n)).map(p=>p.n);
     for (let g=0;g<8&&un.length;g++) for (let i=0;i<5&&un.length;i++) if (!S.groups[g][i]) S.groups[g][i]=un.shift();
@@ -632,6 +689,8 @@ document.addEventListener('click',e=>{
 
 document.addEventListener('change',e=>{
   const el=e.target;
+  if (el.dataset.bx){ const [i,id]=el.dataset.bx.split('|'); const p=S.roster[+i]; p.x=(p.x||[]).filter(z=>z!==id); if (!el.checked) p.x.push(id); commit(); return; }
+  if (el.dataset.lb){ const v=el.value.trim(); if (v) S.lb[el.dataset.lb]=v; else delete S.lb[el.dataset.lb]; commit(); return; }
   if (el.dataset.mk){ S.m[el.dataset.mk]=el.value; commit(); return; }
   if (el.dataset.ri!==undefined){
     const p=S.roster[+el.dataset.ri], f=el.dataset.f;
@@ -657,6 +716,17 @@ function renamePlayer(o,n){
   for (const k in S.a) if (S.a[k]===o) S.a[k]=n;
   S.groups.forEach(g=>g.forEach((x,i)=>{ if (x===o) g[i]=n; }));
 }
+document.getElementById('add-c').innerHTML = Object.keys(CLASSES).map(c=>`<option>${c}</option>`).join('');
+document.getElementById('add-r').innerHTML = ROLES.map(r=>`<option value="${r}">${r==='Healer'?'Heal':r}</option>`).join('');
+document.getElementById('add-r').value='Melee';
+document.getElementById('addform').addEventListener('submit',e=>{
+  e.preventDefault();
+  const inp=document.getElementById('add-n'); const n=inp.value.trim();
+  if (!n) { inp.focus(); return; }
+  if (player(n)) { toast(`${n} is already on the roster.`); return; }
+  S.roster.push({n,c:document.getElementById('add-c').value,r:document.getElementById('add-r').value,st:'Rotation',out:false,x:[]});
+  inp.value=''; commit(); toast(`Added ${n}. Drag them onto any slot.`); inp.focus();
+});
 window.addEventListener('hashchange',async()=>{ await load(); render(); });
 
 load().then(render);
