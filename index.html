@@ -96,6 +96,7 @@ input.lb,input.sech{min-width:0;width:100%;background:transparent;border:1px sol
 input.lb:hover,input.sech:hover{border-color:var(--line2);background:#14171d}
 input.lb:focus,input.sech:focus{outline:none;border-color:var(--accent);background:#14171d}
 input.sech{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);padding:2px 6px;margin-bottom:4px}
+.row.nomk{grid-template-columns:minmax(110px,1fr) minmax(140px,1.3fr) 20px}
 .row .rm{opacity:0;padding:2px 4px}
 .row:hover .rm,.row .rm:focus{opacity:1}
 @media (hover:none){.row .rm{opacity:.6}}
@@ -112,6 +113,13 @@ input.sech{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:up
 .mk:hover{border-color:var(--accent)}
 .notes{margin:12px 0 0;padding:10px 12px 10px 28px;background:#14171d;border:1px solid var(--line);border-radius:8px;color:var(--muted);font-size:13px}
 .notes li{margin:3px 0}
+.strat{margin-top:12px}
+.strath{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.strath span{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);flex:1}
+.strat .notes{margin:0}
+textarea.stratbox{margin-top:0;font-size:13px;line-height:1.5}
+.mv{padding:3px 8px}
+.mv:disabled{opacity:.3;cursor:default}
 textarea.free{width:100%;margin-top:10px;min-height:54px;background:#14171d;border:1px solid var(--line);border-radius:8px;padding:8px 10px;resize:vertical}
 .bossnav{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
 .bossnav button{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:12px;font-weight:600;color:var(--muted)}
@@ -199,6 +207,37 @@ table.rt{width:100%;border-collapse:collapse;font-size:13px}
 const DATA = {"roster":[["Methl","Warrior","Tank","Core",0,"Main Tank"],["Dellz","Warrior","Tank","Rotation",0,"Off Tank 1. Class read from sign-up icon, please check"],["Xanthori","Warrior","Tank","Rotation",0,"Off Tank 2. Class read from sign-up icon, please check"],["Cassyiskewl","Paladin","Healer","Rotation",0,"Main MT healer"],["Tyrivandril","Paladin","Healer","Core",0,"MT healer 2"],["Lavona","Paladin","Healer","Rotation",0,"MT healer 3"],["Dauerscalf","Priest","Healer","Rotation",0,""],["Nocktus","Druid","Healer","Rotation",0,""],["Whoville","Druid","Healer","Rotation",0,"Spelled Wholville in chat, Whoville on the sign-up"],["Eko","Shaman","Healer","Rotation",0,""],["Jimbo","Warrior","Melee","Core",0,""],["Knutt","Warrior","Melee","Rotation",0,"Name cut off on sign-up (Knutt(W...), check spelling"],["goreblas","Warrior","Melee","Rotation",0,"Name cut off on sign-up, check spelling"],["SaucemcSaucy","Warrior","Melee","Rotation",0,"No Core/Rotation tag on sign-up, set to Rotation"],["Vice","Rogue","Melee","Core",0,""],["DoughBoy","Rogue","Melee","Core",0,""],["Whisper","Rogue","Melee","Rotation",0,""],["Wood","Rogue","Melee","Rotation",0,""],["Barnne","Druid","Melee","Core",0,""],["Aedhrian","Paladin","Melee","Core",0,""],["Zoobi","Shaman","Melee","Core",0,""],["Volkan","Shaman","Melee","Rotation",0,""],["betterMatt","Hunter","Ranged","Core",0,""],["Nickels","Hunter","Ranged","Core",0,""],["Blacktre","Hunter","Ranged","Rotation",0,"Name cut off on sign-up, check spelling"],["tenletters","Mage","Ranged","Core",0,""],["Bluntskix","Mage","Ranged","Core",0,""],["Pontolicious","Warlock","Ranged","Core",0,""],["Demonussy","Warlock","Ranged","Core",0,""],["Afflican","Warlock","Ranged","Rotation",0,"Name cut off on sign-up, check spelling"],["Triel","Druid","Ranged","Core",0,""],["Nomsy","Priest","Ranged","Rotation",0,""],["Shambert","Shaman","Ranged","Core",0,""],["Sent","Mage","Ranged","Trial",0,"Signed up Tentative. Class read from icon, please check"]],"groups":[["Methl","Dellz","Xanthori","Volkan","Barnne"],["Jimbo","Knutt","goreblas","SaucemcSaucy","Zoobi"],["Vice","DoughBoy","Whisper","Wood","Aedhrian"],["betterMatt","Nickels","Blacktre","Triel","Nomsy"],["tenletters","Bluntskix","Pontolicious","Demonussy","Afflican"],["Cassyiskewl","Tyrivandril","Lavona","Dauerscalf","Eko"],["Nocktus","Whoville","Shambert","Sent",""],["","","","",""]],"BWL":[{"name":"Razorgore the Untamed","secs":[{"h":"TANKS","slots":[{"l":"Razorgore (phase 2)","d":"MT","m":"Skull","t":"Picks him up when the last egg breaks. Stay ahead on threat: Conflagration disorients his target."},{"l":"Left side adds","d":"OT1","m":"Cross","t":"Dragonspawn and Legionnaires from the left door"},{"l":"Right side adds","d":"OT2","m":"Square","t":"Dragonspawn and Legionnaires from the right door"},{"l":"Overflow add tank","t":"DPS warrior or feral in tank gear for extra adds"},{"l":"Orb controller","t":"Controls Razorgore to destroy the eggs"},{"l":"Backup orb controller","t":"Takes over when the controller's debuff stops them"}]},{"h":"HEALERS","slots":[{"l":"MT heals","d":"MTH1","t":"Razorgore tank in phase 2; orb controller in phase 1"},{"l":"MT heals","d":"MTH2"},{"l":"MT heals","d":"MTH3"},{"l":"Left side tank","d":"OT1H"},{"l":"Right side tank","d":"OT2H"},{"l":"Raid heals","d":"RH1"},{"l":"Raid heals","d":"RH2"}]}],"notes":["Phase 1: the orb controller has Razorgore destroy all 30 eggs while adds pour in from both sides.","Kill Blackwing Mages first (they AoE), tank Dragonspawn and Legionnaires away from the raid.","Phase 2 starts when the last egg breaks: adds despawn and Razorgore is tanked in a corner."]},{"name":"Vaelastrasz the Corrupt","secs":[{"h":"TANKS (taunt rotation)","slots":[{"l":"Tank 1","d":"MT","m":"Skull","t":"Runs out when Burning Adrenaline hits"},{"l":"Tank 2","d":"OT1","t":"Taunts the moment Tank 1 gets Burning Adrenaline"},{"l":"Tank 3","d":"OT2","t":"Next in line after Tank 2"},{"l":"Tank 4 (backup)","t":"DPS warrior in tank gear"}]},{"h":"HEALERS (Essence of the Red = unlimited mana, spam heals)","slots":[{"l":"Tank heals","d":"MTH1"},{"l":"Tank heals","d":"MTH2"},{"l":"Tank heals","d":"MTH3"},{"l":"Tank heals","d":"OT1H"},{"l":"Raid heals","d":"OT2H"},{"l":"Raid heals","d":"RH1"},{"l":"Raid heals","d":"RH2"}]}],"notes":["Burning Adrenaline goes on a mana user every few seconds and on the tank about every 45s. That player runs away from the raid; they explode when it ends.","Everyone except the tank stays behind him (Cleave, Flame Breath)."]},{"name":"Broodlord Lashlayer","secs":[{"h":"TANKS","slots":[{"l":"Broodlord","d":"MT","m":"Skull","t":"Mortal Strike on the tank: keep topped"},{"l":"Second on threat","d":"OT1","t":"Knock Away drops threat; picks him up if MT gets knocked"}]},{"h":"HEALERS","slots":[{"l":"MT heals","d":"MTH1"},{"l":"MT heals","d":"MTH2"},{"l":"MT heals","d":"MTH3"},{"l":"OT heals","d":"OT1H"},{"l":"Raid heals","d":"RH1","t":"Blast Wave on melee"},{"l":"Raid heals","d":"RH2"},{"l":"Raid heals","d":"OT2H"}]},{"h":"SPECIAL","slots":[{"l":"Suppression device disarm","t":"Hallway before the boss"},{"l":"Suppression device disarm"}]}],"notes":["Pull him back to the raid; do not run into the suppression traps."]},{"name":"Firemaw","secs":[{"h":"TANKS","slots":[{"l":"Firemaw","d":"MT","m":"Skull","t":"Onyxia Scale Cloak"},{"l":"Second on threat","d":"OT1","t":"Wing Buffet drops threat: be ready to taunt"}]},{"h":"HEALERS (rotate behind the wall to drop Flame Buffet stacks)","slots":[{"l":"MT heals","d":"MTH1"},{"l":"MT heals","d":"MTH2"},{"l":"MT heals","d":"MTH3"},{"l":"OT heals","d":"OT1H"},{"l":"Raid heals","d":"RH1"},{"l":"Raid heals","d":"RH2"},{"l":"Raid heals","d":"OT2H"}]}],"notes":["Everyone needs an Onyxia Scale Cloak for Shadow Flame.","Flame Buffet stacks on anyone in line of sight: step behind the wall to drop stacks, then come back."]},{"name":"Ebonroc","secs":[{"h":"TANKS","slots":[{"l":"Ebonroc","d":"MT","m":"Skull","t":"Onyxia Scale Cloak"},{"l":"Taunt swap","d":"OT1","t":"Taunts the moment MT gets Shadow of Ebonroc"}]},{"h":"HEALERS","slots":[{"l":"MT heals","d":"MTH1"},{"l":"MT heals","d":"MTH2"},{"l":"OT heals","d":"MTH3"},{"l":"OT heals","d":"OT1H"},{"l":"Raid heals","d":"RH1"},{"l":"Raid heals","d":"RH2"},{"l":"Raid heals","d":"OT2H"}]}],"notes":["Shadow of Ebonroc on a tank heals him when he hits that tank: other tank taunts and holds until it falls off.","Onyxia Scale Cloak for everyone."]},{"name":"Flamegor","secs":[{"h":"TANKS","slots":[{"l":"Flamegor","d":"MT","m":"Skull"},{"l":"Second on threat","d":"OT1","t":"Wing Buffet drops threat"}]},{"h":"TRANQ ROTATION","slots":[{"l":"Tranq 1","t":"Tranquilizing Shot on Frenzy"},{"l":"Tranq 2","t":"Shoots if Tranq 1 misses or is on cooldown"},{"l":"Tranq 3","t":"Backup"}]},{"h":"HEALERS","slots":[{"l":"MT heals","d":"MTH1"},{"l":"MT heals","d":"MTH2"},{"l":"MT heals","d":"MTH3"},{"l":"OT heals","d":"OT1H"},{"l":"Raid heals","d":"RH1","t":"Fire Nova raid damage while Frenzied"},{"l":"Raid heals","d":"RH2"},{"l":"Raid heals","d":"OT2H"}]}],"notes":["Frenzy must be removed fast with Tranquilizing Shot; each Frenzy means more raid fire damage."]},{"name":"Chromaggus","secs":[{"h":"TANKS","slots":[{"l":"Chromaggus","d":"MT","m":"Skull"},{"l":"Backup tank","d":"OT1"}]},{"h":"TRANQ ROTATION","slots":[{"l":"Tranq 1","t":"Frenzy"},{"l":"Tranq 2"},{"l":"Tranq 3"}]},{"h":"AFFLICTION CLEANSE","slots":[{"l":"Black (curse)","t":"Mage / Druid"},{"l":"Black (curse)"},{"l":"Blue (magic)","t":"Priest / Paladin"},{"l":"Blue (magic)"},{"l":"Green (poison)","t":"Druid / Shaman / Paladin"},{"l":"Bronze","t":"Everyone uses Hourglass Sand on themselves; name who calls it"}]},{"h":"HEALERS","slots":[{"l":"MT heals","d":"MTH1"},{"l":"MT heals","d":"MTH2"},{"l":"MT heals","d":"MTH3"},{"l":"Raid heals","d":"OT1H"},{"l":"Raid heals","d":"OT2H"},{"l":"Raid heals","d":"RH1"},{"l":"Raid heals","d":"RH2"}]}],"notes":["Two breaths, different each week. Raid hides out of line of sight when he casts one.","Brood Afflictions: Black curse, Blue magic, Green poison, Bronze (Hourglass Sand), Red can't be removed. All five at once turns a player into a Drakonid.","Bronze this week? Make sure everyone has Hourglass Sand. Breaths this week:"]},{"name":"Nefarian","secs":[{"h":"TANKS","slots":[{"l":"Nefarian (phase 2+)","d":"MT","m":"Skull","t":"Face him away from the raid (Shadow Flame, Cleave)"},{"l":"Left side Drakonids","d":"OT1","m":"Cross","t":"Phase 1 adds"},{"l":"Right side Drakonids","d":"OT2","m":"Square","t":"Phase 1 adds"},{"l":"Extra add tank"}]},{"h":"HEALERS","slots":[{"l":"Nef tank heals","d":"MTH1"},{"l":"Nef tank heals","d":"MTH2"},{"l":"Nef tank heals","d":"MTH3"},{"l":"Left side","d":"OT1H"},{"l":"Right side","d":"OT2H"},{"l":"Raid heals","d":"RH1"},{"l":"Raid heals","d":"RH2"}]},{"h":"SPECIAL","slots":[{"l":"Tremor Totem","t":"Bellowing Roar fear"},{"l":"Tremor Totem (backup)"},{"l":"Fear Ward on MT","t":"If available"}]}],"notes":["Phase 1: Drakonids from both sides until enough die and Nefarian lands. Onyxia Scale Cloak for everyone.","Phase 2: class calls every ~30s. Warriors forced into Berserker Stance, Druids into cat form, Mages polymorph, Priests' heals hurt, Hunters' bows break, Rogues get pulled to him, Warlocks summon infernals, Shamans' totems spawn (kill them).","Phase 3 at 20%: dead Drakonids rise as skeletons. AoE/tank them; Bellowing Roar fear."]}],"AQ40":[{"name":"The Prophet Skeram","secs":[{"h":"TANKS","slots":[{"l":"Skeram","d":"MT","m":"Skull"},{"l":"Image (left)","m":"Cross"},{"l":"Image (right)","m":"Square"}]},{"h":"SPECIAL","slots":[{"l":"Interrupt 1","t":"Arcane Explosion"},{"l":"Interrupt 2"},{"l":"Interrupt 3"},{"l":"CC mind-controlled","t":"Polymorph MC'd players"}]},{"h":"HEALERS","slots":[{"l":"MT heals","d":"MTH1"},{"l":"MT heals","d":"MTH2"},{"l":"MT heals","d":"MTH3"},{"l":"OT heals"},{"l":"Raid heals"},{"l":"Raid heals"}]}],"notes":[]},{"name":"Bug Trio (Vem, Kri, Yauj)","secs":[{"h":"TANKS","slots":[{"l":"Vem"},{"l":"Kri"},{"l":"Yauj"},{"l":"Extra tank"}]},{"h":"SPECIAL","slots":[{"l":"Interrupt Yauj heal 1"},{"l":"Interrupt Yauj heal 2"},{"l":"Interrupt Yauj heal 3"}]},{"h":"HEALERS","slots":[{"l":"MT heals","d":"MTH1"},{"l":"MT heals","d":"MTH2"},{"l":"MT heals","d":"MTH3"},{"l":"OT heals"},{"l":"Raid heals"},{"l":"Raid heals"}]}],"notes":["Kill order:"]},{"name":"Battleguard Sartura","secs":[{"h":"TANKS","slots":[{"l":"Sartura","d":"MT","m":"Skull"},{"l":"Royal Guard 1"},{"l":"Royal Guard 2"},{"l":"Royal Guard 3"}]},{"h":"SPECIAL","slots":[{"l":"Stun 1"},{"l":"Stun 2"},{"l":"Stun 3"}]},{"h":"HEALERS","slots":[{"l":"MT heals","d":"MTH1"},{"l":"MT heals","d":"MTH2"},{"l":"MT heals","d":"MTH3"},{"l":"OT heals"},{"l":"Raid heals"},{"l":"Raid heals"}]}],"notes":[]},{"name":"Fankriss the Unyielding","secs":[{"h":"TANKS","slots":[{"l":"Fankriss","d":"MT","m":"Skull"},{"l":"Taunt swap","t":"Mortal Wound stacks"},{"l":"Worms / adds"},{"l":"Worms / adds"}]},{"h":"HEALERS","slots":[{"l":"MT heals","d":"MTH1"},{"l":"MT heals","d":"MTH2"},{"l":"MT heals","d":"MTH3"},{"l":"OT heals"},{"l":"Raid heals"},{"l":"Raid heals"}]}],"notes":[]},{"name":"Viscidus (optional)","secs":[{"h":"TANKS","slots":[{"l":"Viscidus","d":"MT","m":"Skull"},{"l":"Backup tank"}]},{"h":"SPECIAL","slots":[{"l":"Frost DPS lead"},{"l":"Poison cleanse"},{"l":"Poison cleanse"}]},{"h":"HEALERS","slots":[{"l":"MT heals","d":"MTH1"},{"l":"MT heals","d":"MTH2"},{"l":"MT heals","d":"MTH3"},{"l":"OT heals"},{"l":"Raid heals"},{"l":"Raid heals"}]}],"notes":[]},{"name":"Princess Huhuran","secs":[{"h":"TANKS","slots":[{"l":"Huhuran","d":"MT","m":"Skull"},{"l":"Backup tank"}]},{"h":"TRANQ ROTATION","slots":[{"l":"Tranq 1"},{"l":"Tranq 2"},{"l":"Tranq 3"}]},{"h":"HEALERS","slots":[{"l":"MT heals","d":"MTH1"},{"l":"MT heals","d":"MTH2"},{"l":"MT heals","d":"MTH3"},{"l":"OT heals"},{"l":"Raid heals"},{"l":"Raid heals"}]}],"notes":["Nature resistance needs:"]},{"name":"Twin Emperors","secs":[{"h":"TANKS","slots":[{"l":"Vek'nilash (left)"},{"l":"Vek'nilash (right)"},{"l":"Vek'lor (left)"},{"l":"Vek'lor (right)"},{"l":"Bug duty"}]},{"h":"HEALERS","slots":[{"l":"Left side"},{"l":"Left side"},{"l":"Left side"},{"l":"Right side"},{"l":"Right side"},{"l":"Right side"}]}],"notes":[]},{"name":"Ouro (optional)","secs":[{"h":"TANKS","slots":[{"l":"Ouro tank 1","d":"MT","m":"Skull"},{"l":"Ouro tank 2","t":"Sweep"},{"l":"Ouro tank 3"}]},{"h":"HEALERS","slots":[{"l":"MT heals","d":"MTH1"},{"l":"MT heals","d":"MTH2"},{"l":"MT heals","d":"MTH3"},{"l":"OT heals"},{"l":"Raid heals"},{"l":"Raid heals"}]}],"notes":[]},{"name":"C'Thun","secs":[{"h":"PHASE 1 POSITIONS","slots":[{"l":"Position 1"},{"l":"Position 2"},{"l":"Position 3"},{"l":"Position 4"},{"l":"Position 5"},{"l":"Position 6"},{"l":"Position 7"},{"l":"Position 8"}]},{"h":"PHASE 2","slots":[{"l":"Stomach team 1"},{"l":"Stomach team 2"},{"l":"Claw tentacle tank"},{"l":"Giant tentacle tank"}]},{"h":"HEALERS","slots":[{"l":"MT heals","d":"MTH1"},{"l":"MT heals","d":"MTH2"},{"l":"MT heals","d":"MTH3"},{"l":"OT heals"},{"l":"Raid heals"},{"l":"Raid heals"}]}],"notes":[]}]}
 ;
 
+const sl=(l,t)=>t?{l,t}:{l};
+DATA.BUFF = [
+  {name:'Priest buffs',secs:[
+    {h:'Power Word: Fortitude',slots:[sl('Groups 1–4'),sl('Groups 5–8')]},
+    {h:'Divine Spirit',slots:[sl('Groups 1–4'),sl('Groups 5–8')]},
+    {h:'Shadow Protection',slots:[sl('Groups 1–8','Mainly for Nefarian and C\u2019Thun')]}],
+   notes:['Rebuff after wipes and before every boss pull.','Fear Ward the main tank on Nefarian and Onyxia.']},
+  {name:'Mage & Druid buffs',secs:[
+    {h:'Arcane Intellect',slots:[sl('Groups 1–4'),sl('Groups 5–8')]},
+    {h:'Mark of the Wild',slots:[sl('Groups 1–4'),sl('Groups 5–8')]},
+    {h:'Thorns',slots:[sl('Main tank'),sl('Off tanks')]}],
+   notes:['Mages: Dampen Magic is off by default, ask before using it.']},
+  {name:'Paladin blessings',secs:[
+    {h:'Greater Blessings',slots:[sl('Kings'),sl('Might','Warriors, Rogues, Hunters'),sl('Wisdom','Healers and casters'),sl('Salvation','Everyone except tanks'),sl('Light'),sl('Sanctuary','Tanks')]},
+    {h:'Auras',slots:[sl('Devotion Aura'),sl('Concentration Aura'),sl('Fire Resistance Aura'),sl('Shadow Resistance Aura')]}],
+   notes:['Tanks: right-click off Salvation.','One paladin per blessing; each casts it on every class that needs it.']},
+  {name:'Shaman totems',secs:[
+    {h:'Melee groups',slots:[sl('Windfury / Strength of Earth'),sl('Grace of Air')]},
+    {h:'Caster & healer groups',slots:[sl('Mana Spring / Mana Tide'),sl('Tranquil Air')]},
+    {h:'Resistance',slots:[sl('Fire Resistance Totem'),sl('Nature Resistance Totem','Huhuran, Princess Yauj poison')]}],
+   notes:['Tremor Totem on Nefarian is assigned on the boss page.']},
+  {name:'Soulstones, Innervates & Power Infusion',secs:[
+    {h:'Soulstones (warlock → target)',slots:[sl('Soulstone on main healer'),sl('Soulstone on priest/druid'),sl('Soulstone on tank')]},
+    {h:'Innervates (druid → target)',slots:[sl('Innervate 1'),sl('Innervate 2')]},
+    {h:'Power Infusion',slots:[sl('PI target')]}],
+   notes:['Rename each row with the target, e.g. "Soulstone → Cassyiskewl".']},
+  {name:'World buffs & consumables',secs:[
+    {h:'Who drops / grabs',slots:[sl('Onyxia / Nefarian head'),sl('Rend head'),sl('ZG heart'),sl('Songflower / DMT runner')]}],
+   notes:['Required: Greater Fire Protection for BWL tanks, Onyxia Scale Cloak.','Expected: flasks for prog, elixirs, food buff, weapon oils/stones.']}
+];
+
 const CLASSES = {Warrior:'#C79C6E',Paladin:'#F58CBA',Hunter:'#ABD473',Rogue:'#FFF569',Priest:'#FFFFFF',Shaman:'#2E8BEA',Mage:'#69CCF0',Warlock:'#9482C9',Druid:'#FF7D0A'};
 const ROLES = ['Tank','Healer','Melee','Ranged'];
 const STATUS = ['Core','Rotation','Trial','Bench'];
@@ -219,6 +258,9 @@ const CORE = [
   ['OT1H','OT1 Healer'],['OT2H','OT2 Healer'],['RH1','Raid Healer 1'],['RH2','Raid Healer 2']
 ];
 const RAIDS = {BWL:{name:'Blackwing Lair',c:'#5a1a1a'},AQ40:{name:"Ahn'Qiraj (AQ40)",c:'#5a4514'}};
+const BOSSRAIDS = ['BWL','AQ40'];
+const isRaidTab = t => t==='BWL'||t==='AQ40'||t==='BUFF';
+RAIDS.BUFF = {name:'Buffs',c:'#1d3a4f'};
 const STORE = 'ashen-raid-planner-v1';
 
 function defaults(){
@@ -228,12 +270,12 @@ function defaults(){
     core:{MT:'Methl',OT1:'Dellz',OT2:'Xanthori',MTH1:'Cassyiskewl',MTH2:'Tyrivandril',MTH3:'Lavona',OT1H:'Nocktus',OT2H:'Whoville',RH1:'Dauerscalf',RH2:'Eko'},
     mk:{Moon:'',Triangle:'',Diamond:'',Circle:'',Star:''},
     groups: DATA.groups.map(g=>g.slice()),
-    a:{}, m:{}, notes:{}, lb:{}, cx:{}, hide:{}, cn:0
+    a:{}, m:{}, notes:{}, lb:{}, cx:{}, hide:{}, cn:0, ord:{}, st:{}
   };
 }
 
 let S = defaults();
-const UI = {tab:'BWL', q:'', collapsed:new Set(), sel:null, bossEdit:null};
+const UI = {tab:'BWL', q:'', collapsed:new Set(), sel:null, bossEdit:null, editStrat:null};
 
 /* ---------- state helpers ---------- */
 const player = n => S.roster.find(p=>p.n===n);
@@ -249,6 +291,12 @@ function bossSecs(raid,b){
     return {h:S.lb[hk]??sec.h,hk,si,slots};
   });
 }
+function bossOrder(raid){
+  const n=DATA[raid].length, o=(S.ord[raid]||[]).filter(i=>i<n);
+  for (let i=0;i<n;i++) if (!o.includes(i)) o.push(i);
+  return o;
+}
+const stratText = (raid,bi) => S.st[raid+'.'+bi] ?? DATA[raid][bi].notes.join('\n');
 function bossSlots(raid,b){ return bossSecs(raid,b).flatMap(sec=>sec.slots); }
 const slotLabel = (key,sl) => S.lb[key]??sl.l;
 function slotValue(key,sl){
@@ -312,7 +360,7 @@ function place(name, from, to){
 function packState(){
   return {v:1,d:S.date,l:S.lead,
     r:S.roster.map(p=>p.x&&p.x.length?[p.n,p.c,p.r,p.st,p.out?1:0,p.x]:[p.n,p.c,p.r,p.st,p.out?1:0]),
-    c:S.core,k:S.mk,g:S.groups,a:S.a,m:S.m,n:S.notes,b:S.lb,x:S.cx,h:S.hide,cn:S.cn};
+    c:S.core,k:S.mk,g:S.groups,a:S.a,m:S.m,n:S.notes,b:S.lb,x:S.cx,h:S.hide,cn:S.cn,o:S.ord,t:S.st};
 }
 function unpackState(o){
   const s=defaults();
@@ -322,7 +370,7 @@ function unpackState(o){
   if (o.c) Object.assign(s.core,o.c);
   if (o.k) Object.assign(s.mk,o.k);
   if (Array.isArray(o.g)&&o.g.length===8) s.groups=o.g.map(g=>{g=(g||[]).slice(0,5); while(g.length<5) g.push(''); return g;});
-  s.a=o.a||{}; s.m=o.m||{}; s.n=undefined; s.notes=o.n||{}; s.lb=o.b||{}; s.cx=o.x||{}; s.hide=o.h||{}; s.cn=o.cn||0;
+  s.a=o.a||{}; s.m=o.m||{}; s.n=undefined; s.notes=o.n||{}; s.lb=o.b||{}; s.cx=o.x||{}; s.hide=o.h||{}; s.cn=o.cn||0; s.ord=o.o||{}; s.st=o.t||{};
   return s;
 }
 const b64u = {
@@ -413,7 +461,7 @@ function groupOf(n){ for (let g=0;g<8;g++) if (S.groups[g].includes(n)) return g
 
 function renderBench(){
   const q = UI.q.trim().toLowerCase();
-  const raid = (UI.tab==='BWL'||UI.tab==='AQ40') ? UI.tab : null;
+  const raid = isRaidTab(UI.tab) ? UI.tab : null;
   const cnt = counts(raid);
   let html='';
   ROLES.concat(['Other']).forEach(role=>{
@@ -434,35 +482,42 @@ function renderBench(){
 }
 
 function renderTabs(){
-  const tabs=[['BWL','BWL bosses'],['AQ40','AQ40 bosses'],['setup','Tanks, healers & marks'],['groups','Raid groups'],['roster','Roster & bosses']];
+  const tabs=[['BWL','BWL bosses'],['AQ40','AQ40 bosses'],['BUFF','Buffs'],['setup','Tanks, healers & marks'],['groups','Raid groups'],['roster','Roster & bosses']];
   document.getElementById('tabs').innerHTML = tabs.map(([k,l])=>`<button class="tab${UI.tab===k?' on':''}" data-tab="${k}">${l}</button>`).join('');
 }
 
 function renderRaid(raid){
-  const bosses = DATA[raid];
-  let html = `<div class="bossnav">${bosses.map((b,i)=>`<button data-jump="${raid}-${i}">${i+1}. ${esc(b.name.replace(/ \(.*\)$/,''))}</button>`).join('')}
+  const bosses = DATA[raid], order = bossOrder(raid);
+  let html = `<div class="bossnav">${order.map((i,pos)=>`<button data-jump="${raid}-${i}">${raid==='BUFF'?'':(pos+1)+'. '}${esc(bosses[i].name.replace(/ \(.*\)$/,''))}</button>`).join('')}
     <button data-expand="${raid}">Expand all</button><button data-collapse="${raid}">Collapse all</button></div>`;
-  bosses.forEach((b,bi)=>{
+  order.forEach((bi,pos)=>{ const b=bosses[bi];
     const id = raid+'-'+bi;
     const secs = bossSecs(raid,bi).map(sec=>{
       const rows = sec.slots.map(({sl,key})=>{
         const v=slotValue(key,sl);
         const reset = (sl.d && key in S.a) ? `<button class="x" data-reset="${key}" title="Go back to the default from the Setup tab (${sl.d})">↺</button>` : '';
-        return `<div class="row"><input class="lb" data-lb="${key}" value="${esc(slotLabel(key,sl))}" placeholder="${esc(sl.l)}"${sl.t?` title="${esc(sl.t)}"`:' title="Click to rename"'}>${dropHTML({t:'boss',k:key},v.n,v.inh,'',reset)}${markSelect(key,slotMark(key,sl))}<button class="x rm" data-rmslot="${key}" title="Remove this row">−</button></div>`;
+        return `<div class="row${raid==='BUFF'?' nomk':''}"><input class="lb" data-lb="${key}" value="${esc(slotLabel(key,sl))}" placeholder="${esc(sl.l)}"${sl.t?` title="${esc(sl.t)}"`:' title="Click to rename"'}>${dropHTML({t:'boss',k:key},v.n,v.inh,'',reset)}${raid==='BUFF'?'':markSelect(key,slotMark(key,sl))}<button class="x rm" data-rmslot="${key}" title="Remove this row">−</button></div>`;
       }).join('');
       return `<div class="sec"><input class="sech" data-lb="${sec.hk}" value="${esc(sec.h)}" title="Click to rename">${rows}<button class="addslot" data-addslot="${raid}.${bi}.${sec.si}">+ Add row</button></div>`;
     }).join('');
     const sitting = S.roster.filter(p=>!p.out && p.x && p.x.includes(raid+'.'+bi)).map(p=>p.n);
     const sitHTML = sitting.length ? `<p class="hint sitout">Sitting out: ${sitting.map(esc).join(', ')}</p>` : '';
-    const notes = b.notes.length ? `<ul class="notes">${b.notes.map(n=>`<li>${esc(n)}</li>`).join('')}</ul>` : '';
+    const sid=raid+'.'+bi, lines=stratText(raid,bi).split('\n').map(x=>x.replace(/^\s*[•\-*]\s*/,'').trim()).filter(Boolean);
+    const notes = UI.editStrat===sid
+      ? `<div class="strat"><div class="strath"><span>${raid==='BUFF'?'Notes':'Strategy'}</span><button class="btn small primary" data-stratdone="${sid}">Done</button>${sid in S.st?`<button class="btn small ghost" data-stratreset="${sid}">Restore original</button>`:''}</div>
+         <textarea class="free stratbox" data-strat="${sid}" rows="${Math.max(4,lines.length+2)}" placeholder="One point per line">${esc(stratText(raid,bi))}</textarea></div>`
+      : `<div class="strat"><div class="strath"><span>${raid==='BUFF'?'Notes':'Strategy'}</span><button class="btn small ghost" data-stratedit="${sid}">Edit</button></div>
+         ${lines.length?`<ul class="notes">${lines.map(n=>`<li>${esc(n)}</li>`).join('')}</ul>`:'<p class="hint">Nothing yet. Press Edit to add points.</p>'}</div>`;
     html += `<section class="card${UI.collapsed.has(id)?' collapsed':''}" id="${id}" style="--bossc:${RAIDS[raid].c}">
       <div class="hd"><button class="caret" data-toggle="${id}" aria-label="Collapse">${UI.collapsed.has(id)?'▸':'▾'}</button>
-        <h2><span class="num">${bi+1}.</span> ${esc(b.name)}</h2>
+        <h2>${raid==='BUFF'?'':`<span class="num">${pos+1}.</span> `}${esc(b.name)}</h2>
+        <button class="btn small ghost mv" data-move="${raid}|${bi}|-1" title="Move up" ${pos===0?'disabled':''}>↑</button>
+        <button class="btn small ghost mv" data-move="${raid}|${bi}|1" title="Move down" ${pos===order.length-1?'disabled':''}>↓</button>
         <button class="btn small" data-copy="${raid}|${bi}" title="Copy assignments as text for raid chat or Discord">Copy text</button>
         ${Object.keys(S.hide).some(k=>k.startsWith(raid+'.'+bi+'.'))?`<button class="btn small ghost" data-restore="${raid}.${bi}">Restore rows</button>`:''}
         <button class="btn small ghost" data-clearboss="${raid}|${bi}" title="Clear this boss back to defaults">Clear</button></div>
       <div class="bd">${sitHTML}<div class="secs">${secs}</div>${notes}
-        <textarea class="free" data-note="${raid}.${bi}" placeholder="Notes for this week (breaths, kill order, positions…)">${esc(S.notes[raid+'.'+bi]||'')}</textarea></div>
+        <textarea class="free" data-note="${raid}.${bi}" placeholder="${raid==='BUFF'?'Notes for this week…':'Notes for this week (breaths, kill order, positions…)'}">${esc(S.notes[raid+'.'+bi]||'')}</textarea></div>
     </section>`;
   });
   return html;
@@ -502,7 +557,7 @@ function renderGroups(){
 
 function bossPicker(p,i){
   let h=`<tr><td></td><td colspan="7"><div class="bx">`;
-  Object.keys(RAIDS).forEach(raid=>{
+  BOSSRAIDS.forEach(raid=>{
     h+=`<h6>${RAIDS[raid].name} <button class="btn small ghost" data-bxall="${i}|${raid}|1">All</button> <button class="btn small ghost" data-bxall="${i}|${raid}|0">None</button></h6>`;
     DATA[raid].forEach((b,bi)=>{ const id=raid+'.'+bi;
       h+=`<label><input type="checkbox" data-bx="${i}|${id}" ${p.x&&p.x.includes(id)?'':'checked'}>${bi+1}. ${esc(b.name)}</label>`; });
@@ -529,7 +584,7 @@ function renderRoster(){
 function render(){
   renderTabs(); renderBench();
   const m=document.getElementById('main');
-  if (UI.tab==='BWL'||UI.tab==='AQ40') m.innerHTML=renderRaid(UI.tab);
+  if (isRaidTab(UI.tab)) m.innerHTML=renderRaid(UI.tab);
   else if (UI.tab==='setup') m.innerHTML=renderSetup();
   else if (UI.tab==='groups') m.innerHTML=renderGroups();
   else m.innerHTML=renderRoster();
@@ -667,6 +722,11 @@ document.addEventListener('click',e=>{
     delete S.a[key]; delete S.m[key]; delete S.lb[key]; commit();
     toast('Row removed. "Restore rows" on the boss brings back the built-in ones.'); return; }
   const rr=el.closest('[data-restore]'); if (rr){ const p=rr.dataset.restore+'.'; Object.keys(S.hide).forEach(k=>{ if(k.startsWith(p)) delete S.hide[k]; }); commit(); return; }
+  const mv=el.closest('[data-move]'); if (mv){ const [r,b,d]=mv.dataset.move.split('|'); const o=bossOrder(r); const i=o.indexOf(+b), j=i+(+d);
+    if (j<0||j>=o.length) return; [o[i],o[j]]=[o[j],o[i]]; S.ord[r]=o; commit(); document.getElementById(r+'-'+b).scrollIntoView({block:'nearest'}); return; }
+  const se=el.closest('[data-stratedit]'); if (se){ UI.editStrat=se.dataset.stratedit; render(); const t=document.querySelector(`[data-strat="${UI.editStrat}"]`); if (t) t.focus(); return; }
+  const sd=el.closest('[data-stratdone]'); if (sd){ UI.editStrat=null; render(); return; }
+  const sr=el.closest('[data-stratreset]'); if (sr){ delete S.st[sr.dataset.stratreset]; UI.editStrat=null; commit(); return; }
   const be=el.closest('[data-bossedit]'); if (be){ const i=+be.dataset.bossedit; UI.bossEdit = UI.bossEdit===i?null:i; render(); return; }
   const ba=el.closest('[data-bxall]'); if (ba){ const [i,raid,on]=ba.dataset.bxall.split('|'); const p=S.roster[+i]; p.x=(p.x||[]).filter(id=>!id.startsWith(raid+'.'));
     if (on==='0') DATA[raid].forEach((_,bi)=>p.x.push(raid+'.'+bi)); commit(); return; }
@@ -704,6 +764,7 @@ document.addEventListener('change',e=>{
 });
 document.addEventListener('input',e=>{
   const el=e.target;
+  if (el.dataset.strat){ S.st[el.dataset.strat]=el.value; clearTimeout(saveTimer); saveTimer=setTimeout(saveLocal,400); return; }
   if (el.dataset.note){ S.notes[el.dataset.note]=el.value; clearTimeout(saveTimer); saveTimer=setTimeout(saveLocal,400); return; }
   if (el.id==='q'){ UI.q=el.value; renderBench(); return; }
   if (el.id==='f-date'){ S.date=el.value; clearTimeout(saveTimer); saveTimer=setTimeout(saveLocal,400); }

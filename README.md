@@ -13,6 +13,8 @@ Drag-and-drop raid assignments for Blackwing Lair and AQ40: tanks, healers, raid
 - **Add member** (top of the roster panel) adds a player with a class and role.
 - **Roster & bosses** edits class, role and status, marks who is out this week, and picks which bosses each player is in for. Anyone sitting out a boss shows crossed out on that boss.
 - Click any job name or section heading on a boss to rename it. **+ Add row** adds a job, and − removes one (**Restore rows** brings the built-in ones back).
+- **Edit** under a boss's strategy rewrites it (one point per line). ↑ and ↓ on a boss move it in the kill order.
+- **Buffs** assigns Fortitude, Spirit, Intellect, Mark of the Wild, blessings, auras, totems, soulstones, innervates and world buffs.
 - **Copy text** on a boss gives a one-paste summary for raid chat or Discord (`{skull}` shows as the icon in WoW chat).
 
 ## Saving and sharing
