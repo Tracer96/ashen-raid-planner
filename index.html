@@ -440,7 +440,7 @@ function place(name, from, to){
 function packState(){
   return {v:1,d:S.date,l:S.lead,
     r:S.roster.map(p=>p.x&&p.x.length?[p.n,p.c,p.r,p.st,p.out?1:0,p.x]:[p.n,p.c,p.r,p.st,p.out?1:0]),
-    c:S.core,k:S.mk,g:S.groups,a:S.a,m:S.m,n:S.notes,b:S.lb,x:S.cx,h:S.hide,cn:S.cn,o:S.ord,t:S.st,ro:S.ro,tb:S.tabs,w:S.mkw,bd:S.board};
+    c:S.core,k:S.mk,g:S.groups,a:S.a,m:S.m,n:S.notes,b:S.lb,x:S.cx,h:S.hide,cn:S.cn,o:S.ord,t:S.st,ro:S.ro,tb:S.tabs,w:S.mkw,bd:S.board,bv:BOARD_VER};
 }
 function unpackState(o){
   const s=defaults();
@@ -450,7 +450,7 @@ function unpackState(o){
   if (o.c) Object.assign(s.core,o.c);
   if (o.k) Object.assign(s.mk,o.k);
   if (Array.isArray(o.g)&&o.g.length===8) s.groups=o.g.map(g=>{g=(g||[]).slice(0,5); while(g.length<5) g.push(''); return g;});
-  s.a=o.a||{}; s.m=o.m||{}; s.n=undefined; s.notes=o.n||{}; s.lb=o.b||{}; s.cx=o.x||{}; s.hide=o.h||{}; s.cn=o.cn||0; s.ord=o.o||{}; s.st=o.t||{}; s.ro=o.ro||{}; s.mkw=o.w||{}; s.board=Array.isArray(o.bd)?o.bd:null; if (o.tb&&Array.isArray(o.tb.order)) s.tabs={order:o.tb.order,hidden:o.tb.hidden||[]};
+  s.a=o.a||{}; s.m=o.m||{}; s.n=undefined; s.notes=o.n||{}; s.lb=o.b||{}; s.cx=o.x||{}; s.hide=o.h||{}; s.cn=o.cn||0; s.ord=o.o||{}; s.st=o.t||{}; s.ro=o.ro||{}; s.mkw=o.w||{}; s.board=(Array.isArray(o.bd)&&o.bv===BOARD_VER)?o.bd:null; s.oldBoard=!!o.bd&&!s.board; if (o.tb&&Array.isArray(o.tb.order)) s.tabs={order:o.tb.order,hidden:o.tb.hidden||[]};
   return s;
 }
 const b64u = {
@@ -497,7 +497,9 @@ async function load(){
   try { const raw=localStorage.getItem(STORE); if (raw){ S=unpackState(JSON.parse(raw)); setSaved('Saved in this browser'); } } catch(e){}
   loadMapAssets();
 }
-function loadMapAssets(){ try { S.bassets=JSON.parse(localStorage.getItem(STORE+'-maps')||'{}')||{}; } catch(e){ S.bassets={}; } }
+// Bump when board.html is rebuilt from a newer map builder; older saved map edits are then dropped.
+const BOARD_VER='1793215686';
+function loadMapAssets(){ try { S.bassets=JSON.parse(localStorage.getItem(STORE+'-maps')||'{}')||{}; } catch(e){ S.bassets={}; }  if (S.oldBoard){ S.bassets={}; try { localStorage.removeItem(STORE+'-maps'); } catch(e){} } }
 async function share(){
   const code = await encodeState();
   const url = location.origin+location.pathname+'#p='+code;
