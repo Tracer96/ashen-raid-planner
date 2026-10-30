@@ -251,7 +251,7 @@ table.rt{width:100%;border-collapse:collapse;font-size:13px}
 /* view-only links */
 .vobanner{display:none;align-items:center;gap:8px;padding:7px 12px;margin:12px 20px 0;border-radius:8px;border:1px solid var(--line2);background:#1f242e;color:var(--muted);font-size:13px}
 body.viewonly .vobanner{display:flex}
-body.viewonly :is([data-rmboss],#b-reset,#b-add,#b-addtoggle,#addform,#b-autogroup,#b-cleargroups,[data-clear],[data-reset],[data-clearboss],[data-addslot],[data-addcrow],[data-restore],[data-editmap],[data-move],[data-stratedit],[data-stratreset],[data-bossedit],[data-bxall],[data-del],[data-tabmenu]){display:none!important}
+body.viewonly :is([data-rmboss],[data-addboss],#b-reset,#b-add,#b-addtoggle,#addform,#b-autogroup,#b-cleargroups,[data-clear],[data-reset],[data-clearboss],[data-addslot],[data-addcrow],[data-restore],[data-editmap],[data-move],[data-stratedit],[data-stratreset],[data-bossedit],[data-bxall],[data-del],[data-tabmenu]){display:none!important}
 body.viewonly :is(.grip,[data-rmslot],[data-rmcrow]){visibility:hidden;pointer-events:none}
 body.viewonly .chip{cursor:default}
 body.viewonly .edhint{display:none}
@@ -569,6 +569,8 @@ async function load(){
 }
 // Bump when board.html is rebuilt from a newer map builder; older saved map edits are then dropped.
 const BOARD_VER='1793215686';
+// changes the map frames' address on each release so browsers don't keep an old cached board.html
+const BUILD='20261030b';
 function loadMapAssets(){ try { S.bassets=JSON.parse(localStorage.getItem(STORE+'-maps')||'{}')||{}; } catch(e){ S.bassets={}; }  if (S.oldBoard){ S.bassets={}; try { localStorage.removeItem(STORE+'-maps'); } catch(e){} } }
 async function share(view){
   const code = LIVE.id ? '' : await encodeState();
@@ -748,15 +750,15 @@ function hiddenList(){
 function mapHTML(raid,bi,name){
   return `<div class="mapwrap"><div class="maphd"><span>Strategy map</span><span class="hint" style="margin:0;flex:1">Drag to pan · Ctrl + scroll to zoom</span>
     <button class="btn small primary" data-editmap="${esc(name)}">✎ Edit map</button><button class="btn small" data-tab="maps">Full board</button></div>
-    <iframe class="mapframe" loading="lazy" title="${esc(name)} map" data-boss="${esc(name)}" src="board.html?boss=${encodeURIComponent(name)}${raid==='BWL'?'&zoom=1.25':''}"></iframe></div>`;
+    <iframe class="mapframe" loading="lazy" title="${esc(name)} map" data-boss="${esc(name)}" src="board.html?v=${BUILD}&boss=${encodeURIComponent(name)}${raid==='BWL'?'&zoom=1.25':''}"></iframe></div>`;
 }
 function renderMaps(){
-  return `<div class="fullmap"><iframe id="fullmap" class="mapframe" title="Strategy maps" src="board.html?full=1${VIEW?'&ro=1':''}"></iframe></div>`;
+  return `<div class="fullmap"><iframe id="fullmap" class="mapframe" title="Strategy maps" src="board.html?v=${BUILD}&full=1${VIEW?'&ro=1':''}"></iframe></div>`;
 }
 function renderRaid(raid){
   const bosses = DATA[raid], order = bossOrder(raid);
   let html = `<div class="bossnav">${order.map((i,pos)=>`<button data-jump="${raid}-${i}">${raid==='BUFF'?'':(pos+1)+'. '}${esc(bosses[i].name.replace(/ \(.*\)$/,''))}</button>`).join('')}
-    <button data-expand="${raid}">Expand all</button><button data-collapse="${raid}">Collapse all</button></div>`;
+    <button data-expand="${raid}">Expand all</button><button data-collapse="${raid}">Collapse all</button>${raid==='BWL'?'<button data-addboss="BWL" title="Add a boss or trash pack card. Name it like its strategy map page to show that map on it.">+ Add boss</button>':''}</div>`;
   order.forEach((bi,pos)=>{ const b=bosses[bi];
     const id = raid+'-'+bi;
     const allSecs = bossSecs(raid,bi);
@@ -1133,6 +1135,9 @@ document.addEventListener('click',e=>{
   const co=el.closest('[data-collapse]'); if (co){ DATA[co.dataset.collapse].forEach((_,i)=>UI.collapsed.add(co.dataset.collapse+'-'+i)); render(); return; }
   const cp=el.closest('[data-copy]'); if (cp){ const [r,b]=cp.dataset.copy.split('|'); const txt=bossText(r,+b);
     navigator.clipboard.writeText(txt).then(()=>toast('Copied. Marks like {skull} show as icons in WoW chat.'),()=>prompt('Copy:',txt)); return; }
+  const ab=el.closest('[data-addboss]'); if (ab){ const r=ab.dataset.addboss; const n=(prompt('Boss or trash pack name (use the same first word as its strategy map page):')||'').trim(); if (!n) return;
+    const e=(S.eb[r]=S.eb[r]||[]).find(x=>x.n.toLowerCase()===n.toLowerCase()); if (e) delete e.gone; else S.eb[r].push({n});
+    commit(); const bi=BASE[r].length+S.eb[r].findIndex(x=>x.n.toLowerCase()===n.toLowerCase()); const c=document.getElementById(r+'-'+bi); if (c) c.scrollIntoView({behavior:'smooth',block:'start'}); return; }
   const rb=el.closest('[data-rmboss]'); if (rb){ const [r,b]=rb.dataset.rmboss.split('|'); const e=S.eb[r][+b-BASE[r].length];
     if (e && confirm(`Remove the ${e.n} card? Its map stays on the strategy board.`)){ e.gone=1; commit(); } return; }
   const cb=el.closest('[data-clearboss]'); if (cb){ const [r,b]=cb.dataset.clearboss.split('|');
@@ -1231,7 +1236,7 @@ function openMapEditor(boss,page,create){
   closeMapEditor();
   OV={page};
   const d=document.createElement('div'); d.id='mapov';
-  d.innerHTML=`<iframe title="Map editor" src="board.html?edit=1${boss?'&boss='+encodeURIComponent(boss):''}${create?'&create=1':''}"></iframe>`;
+  d.innerHTML=`<iframe title="Map editor" src="board.html?v=${BUILD}&edit=1${boss?'&boss='+encodeURIComponent(boss):''}${create?'&create=1':''}"></iframe>`;
   document.body.appendChild(d); document.body.classList.add('ovopen');
 }
 function closeMapEditor(){ const d=document.getElementById('mapov'); if (d) d.remove(); document.body.classList.remove('ovopen'); OV=null; }
