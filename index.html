@@ -251,7 +251,7 @@ table.rt{width:100%;border-collapse:collapse;font-size:13px}
 /* view-only links */
 .vobanner{display:none;align-items:center;gap:8px;padding:7px 12px;margin:12px 20px 0;border-radius:8px;border:1px solid var(--line2);background:#1f242e;color:var(--muted);font-size:13px}
 body.viewonly .vobanner{display:flex}
-body.viewonly :is(#b-reset,#b-add,#b-addtoggle,#addform,#b-autogroup,#b-cleargroups,[data-clear],[data-reset],[data-clearboss],[data-addslot],[data-addcrow],[data-restore],[data-editmap],[data-move],[data-stratedit],[data-stratreset],[data-bossedit],[data-bxall],[data-del],[data-tabmenu]){display:none!important}
+body.viewonly :is([data-rmboss],#b-reset,#b-add,#b-addtoggle,#addform,#b-autogroup,#b-cleargroups,[data-clear],[data-reset],[data-clearboss],[data-addslot],[data-addcrow],[data-restore],[data-editmap],[data-move],[data-stratedit],[data-stratreset],[data-bossedit],[data-bxall],[data-del],[data-tabmenu]){display:none!important}
 body.viewonly :is(.grip,[data-rmslot],[data-rmcrow]){visibility:hidden;pointer-events:none}
 body.viewonly .chip{cursor:default}
 body.viewonly .edhint{display:none}
@@ -368,7 +368,7 @@ function defaults(){
     roster: DATA.roster.map(r=>({n:r[0],c:r[1],r:r[2],st:r[3],out:!!r[4],x:[]})),
     L:{BWL:defLineup(), AQ40:defLineup()},
     groups: DATA.groups.map(g=>g.slice()),
-    a:{}, m:{}, notes:{}, lb:{}, cx:{}, hide:{}, cn:0, ord:{}, st:{}, ro:{}, board:null, bassets:{}, tabs:{order:[],hidden:[]}
+    a:{}, m:{}, notes:{}, lb:{}, cx:{}, hide:{}, cn:0, ord:{}, st:{}, ro:{}, eb:{BWL:[]}, board:null, bassets:{}, tabs:{order:[],hidden:[]}
   };
 }
 
@@ -395,7 +395,30 @@ function bossSecs(raid,b){
 function bossOrder(raid){
   const n=DATA[raid].length, o=(S.ord[raid]||[]).filter(i=>i<n);
   for (let i=0;i<n;i++) if (!o.includes(i)) o.push(i);
-  return o;
+  return o.filter(i=>!DATA[raid][i].gone);
+}
+/* ---------- bosses added from the strategy maps ---------- */
+// A map page whose name doesn't match any boss gets its own card. S.eb keeps these names in the order they
+// were found, and a removed one stays as {n,gone:1} so the slot keys (raid.boss.slot) of later ones never shift.
+const BASE = {BWL:DATA.BWL.slice(), AQ40:DATA.AQ40.slice()};
+function extraBoss(e){
+  return {name:e.n, gone:!!e.gone, extra:true, notes:[], secs:[
+    {h:'TANKS', slots:[{l:e.n,d:'MT',m:'Skull'},{l:'Off tank',d:'OT1',m:'Cross'},{l:'Off tank 2',d:'OT2',m:'Square'}]},
+    {h:'HEALERS', slots:[{l:'MT heals',d:'MTH1'},{l:'MT heals',d:'MTH2'},{l:'MT heals',d:'MTH3'},{l:'OT heals',d:'OT1H'},{l:'OT2 heals',d:'OT2H'},{l:'Raid heals',d:'RH1'},{l:'Raid heals',d:'RH2'}]}]};
+}
+function syncExtra(){ for (const r in BASE) DATA[r]=BASE[r].concat(((S.eb||{})[r]||[]).map(extraBoss)); }
+const pnorm = s => String(s||'').toLowerCase().replace(/[^a-z' ]/g,' ').trim();
+// same rule the map board uses to put a page on a boss card: the page group's first word appears in the boss name
+const pageGroup = n => { const m=String(n||'').split(/\s+[—–-]\s+/); return (m.length>1?m[0]:String(n||'')).trim(); };
+function notePages(names){
+  if (!Array.isArray(names) || VIEW) return;
+  syncExtra();
+  const known = [...DATA.BWL, ...DATA.AQ40].map(b=>pnorm(b.name).split(/\s+/));
+  const added=[];
+  names.forEach(n=>{ const g=pageGroup(n), w=pnorm(g).split(/\s+/)[0];
+    if (!w || known.some(ws=>ws.includes(w))) return;
+    (S.eb.BWL=S.eb.BWL||[]).push({n:g}); known.push(pnorm(g).split(/\s+/)); added.push(g); });
+  if (added.length){ commit(); toast(`Added ${added.join(', ')} to BWL bosses from the strategy maps.`); }
 }
 const stratText = (raid,bi) => S.st[raid+'.'+bi] ?? DATA[raid][bi].notes.join('\n');
 function bossSlots(raid,b){ return bossSecs(raid,b).flatMap(sec=>sec.slots); }
@@ -460,12 +483,12 @@ function place(name, from, to){
 function packState(){
   return {v:1,d:S.date,l:S.lead,
     r:S.roster.map(p=>p.x&&p.x.length?[p.n,p.c,p.r,p.st,p.out?1:0,p.x]:[p.n,p.c,p.r,p.st,p.out?1:0]),
-    L:S.L,g:S.groups,a:S.a,m:S.m,n:S.notes,b:S.lb,x:S.cx,h:S.hide,cn:S.cn,o:S.ord,t:S.st,ro:S.ro,tb:S.tabs,bd:S.board,bv:BOARD_VER};
+    L:S.L,g:S.groups,a:S.a,m:S.m,n:S.notes,b:S.lb,x:S.cx,h:S.hide,cn:S.cn,o:S.ord,t:S.st,ro:S.ro,tb:S.tabs,eb:S.eb,bd:S.board,bv:BOARD_VER};
 }
 function unpackState(o){
   const s=defaults();
   if (!o||o.v!==1) return s;
-  s.date=o.d||''; s.lead=o.l||'';
+  s.date=o.d||''; s.lead=o.l||''; if (o.eb&&Array.isArray(o.eb.BWL)) s.eb={BWL:o.eb.BWL.filter(e=>e&&e.n)};
   if (Array.isArray(o.r)) s.roster=o.r.map(r=>({n:String(r[0]),c:r[1],r:r[2],st:r[3]||'',out:!!r[4],x:Array.isArray(r[5])?r[5]:[]}));
   if (o.L) LRAIDS.forEach(r=>{ const x=o.L[r]; if (!x) return; const L=s.L[r];
     if (Array.isArray(x.rows)) L.rows=x.rows; Object.assign(L.core,x.core||{}); L.mk=x.mk||{}; L.mkw=x.mkw||{}; });
@@ -659,7 +682,7 @@ function markSelect(key,cur){
 function counts(raid){
   const c={};
   const add=n=>{ if(n) c[n]=(c[n]||0)+1; };
-  if (raid){ DATA[raid].forEach((_,b)=>bossSlots(raid,b).forEach(({sl,key})=>add(slotValue(key,sl).n))); }
+  if (raid){ bossOrder(raid).forEach(b=>bossSlots(raid,b).forEach(({sl,key})=>add(slotValue(key,sl).n))); }
   return c;
 }
 function groupOf(n){ for (let g=0;g<8;g++) if (S.groups[g].includes(n)) return g+1; return 0; }
@@ -765,7 +788,7 @@ function renderRaid(raid){
         <button class="btn small ghost mv" data-move="${raid}|${bi}|1" title="Move down" ${pos===order.length-1?'disabled':''}>↓</button>
         <button class="btn small" data-copy="${raid}|${bi}" title="Copy assignments as text for raid chat or Discord">Copy text</button>
         ${Object.keys(S.hide).some(k=>k.startsWith(raid+'.'+bi+'.'))?`<button class="btn small ghost" data-restore="${raid}.${bi}">Restore rows</button>`:''}
-        <button class="btn small ghost" data-clearboss="${raid}|${bi}" title="Clear this boss back to defaults">Clear</button></div>
+        <button class="btn small ghost" data-clearboss="${raid}|${bi}" title="Clear this boss back to defaults">Clear</button>${b.extra?`<button class="btn small ghost" data-rmboss="${raid}|${bi}" title="Remove this boss card">Remove</button>`:''}</div>
       <div class="bd"><div class="csit">${sitHTML}</div><div class="cgrid${raid==='BUFF'?' nomap':''}"><div class="cl">${L.map(secHTML).join('')}</div>${raid==='BUFF'?'':mapHTML(raid,bi,b.name)}<div class="cr">${Rt.map(secHTML).join('')}</div></div>
         <div class="cbot">${raid==='BUFF'?notes:`<details class="mech" data-mech="${sid}"${UI.editStrat===sid||UI.mech.has(sid)?' open':''}><summary>Mechanics notes</summary>${notes}</details>`}
         <textarea class="free" data-note="${raid}.${bi}" placeholder="${raid==='BUFF'?'Notes for this week…':'Notes for this week (breaths, kill order, positions…)'}">${esc(S.notes[raid+'.'+bi]||'')}</textarea></div></div>
@@ -815,7 +838,7 @@ function bossPicker(p,i){
   let h=`<tr><td></td><td colspan="7"><div class="bx">`;
   BOSSRAIDS.forEach(raid=>{
     h+=`<h6>${RAIDS[raid].name} <button class="btn small ghost" data-bxall="${i}|${raid}|1">All</button> <button class="btn small ghost" data-bxall="${i}|${raid}|0">None</button></h6>`;
-    DATA[raid].forEach((b,bi)=>{ const id=raid+'.'+bi;
+    DATA[raid].forEach((b,bi)=>{ if (b.gone) return; const id=raid+'.'+bi;
       h+=`<label><input type="checkbox" data-bx="${i}|${id}" ${p.x&&p.x.includes(id)?'':'checked'}>${bi+1}. ${esc(b.name)}</label>`; });
   });
   return h+'</div></td></tr>';
@@ -907,6 +930,7 @@ function patchRaid(m,html){
   return true;
 }
 function render(){
+  syncExtra();
   renderTabs(); renderBench();
   const m=document.getElementById('main');
   const same = m.dataset.view===UI.tab;
@@ -1109,6 +1133,8 @@ document.addEventListener('click',e=>{
   const co=el.closest('[data-collapse]'); if (co){ DATA[co.dataset.collapse].forEach((_,i)=>UI.collapsed.add(co.dataset.collapse+'-'+i)); render(); return; }
   const cp=el.closest('[data-copy]'); if (cp){ const [r,b]=cp.dataset.copy.split('|'); const txt=bossText(r,+b);
     navigator.clipboard.writeText(txt).then(()=>toast('Copied. Marks like {skull} show as icons in WoW chat.'),()=>prompt('Copy:',txt)); return; }
+  const rb=el.closest('[data-rmboss]'); if (rb){ const [r,b]=rb.dataset.rmboss.split('|'); const e=S.eb[r][+b-BASE[r].length];
+    if (e && confirm(`Remove the ${e.n} card? Its map stays on the strategy board.`)){ e.gone=1; commit(); } return; }
   const cb=el.closest('[data-clearboss]'); if (cb){ const [r,b]=cb.dataset.clearboss.split('|');
     if (!confirm('Clear the changes on this boss and go back to the defaults?')) return;
     const p=r+'.'+b+'.'; Object.keys(S.a).forEach(k=>{ if(k.startsWith(p)) delete S.a[k]; }); Object.keys(S.m).forEach(k=>{ if(k.startsWith(p)) delete S.m[k]; }); commit(); return; }
@@ -1213,8 +1239,9 @@ window.addEventListener('message',e=>{
   const m=e.data; if (!m||!m.ab) return;
   const fr=mapFrames().find(f=>f.contentWindow===e.source); if (!fr) return;
   if (m.type==='ready'){ sendLoad(e.source, fr.closest('#mapov')&&OV&&OV.page!=null?{page:OV.page}:{}); return; }
+  if (m.type==='pages'){ notePages(m.names); return; }
   if (m.type==='save'){
-    S.board=m.pages; S.bassets=m.assets||{};
+    S.board=m.pages; S.bassets=m.assets||{}; notePages(m.pages.map(p=>p.name));
     clearTimeout(saveTimer); saveTimer=setTimeout(saveLocal,300);
     mapFrames().forEach(f=>{ if (f.contentWindow!==e.source) sendLoad(f.contentWindow); });
     return;

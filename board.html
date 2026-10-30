@@ -2324,6 +2324,7 @@ boot();
         } else { if (mode === 'edit') setMode('view'); }
       }
       renderAll(); updateSaved(); showEmpty(); requestAnimationFrame(fitView);
+      send({ type: 'pages', names: project.pages.map(p => p.name) });
     }
   });
   send({ type: 'ready' });
