@@ -52,6 +52,15 @@ aside h3{margin:0;font-family:Cinzel,serif;font-size:18px;color:var(--accent2);l
 .rhead .cnt{font-size:12px;color:var(--muted);flex:1}
 .rhead .btn{padding:4px 10px}
 aside{background:linear-gradient(180deg,#1a1e27,var(--panel) 120px)!important}
+/* the roster folds away to a slim tab so the boss maps get the whole width */
+#b-fold{padding:4px 8px;font-size:13px;line-height:1}
+body.rfold .wrap{grid-template-columns:46px minmax(0,1fr)}
+body.rfold aside{padding:8px 5px;overflow:hidden}
+body.rfold aside>:not(.rhead){display:none}
+body.rfold .rhead{flex-direction:column;margin:0}
+body.rfold .rhead>:not(#b-fold){display:none}
+body.rfold #b-fold{writing-mode:vertical-rl;padding:12px 7px;font-size:13px;letter-spacing:.06em;white-space:nowrap}
+@media (max-width:860px){body.rfold .wrap{grid-template-columns:1fr} body.rfold .rhead{flex-direction:row} body.rfold #b-fold{writing-mode:horizontal-tb}}
 #benchlist .chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:5px}
 #benchlist .chip{width:100%;padding:6px 8px 6px 8px;border-radius:8px;background:linear-gradient(90deg,color-mix(in srgb,var(--cc) 16%,#232833),#232833 70%)}
 #benchlist .chip .nm{flex:1}
@@ -162,19 +171,15 @@ textarea.stratbox{margin-top:0;font-size:13px;line-height:1.5}
 @media (max-width:520px){.pboss{grid-template-columns:1fr;gap:4px}}
 .card .bd{container-type:inline-size}
 .cgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
-.cgrid .mapwrap{grid-column:1/-1;order:-1;margin-top:0}
+.cgrid .mapwrap{grid-column:1/-1;order:-1;margin-top:0;min-width:0}
 .cl,.cr{display:grid;gap:12px;align-content:start;min-width:0}
 .cgrid.nomap{grid-template-columns:1fr}
 .cgrid.nomap .cl{grid-template-columns:repeat(auto-fill,minmax(330px,1fr))}
 .cgrid.nomap .cr{display:none}
-@container (min-width:980px){
-  .cgrid:not(.nomap){grid-template-columns:minmax(290px,.85fr) minmax(0,1.5fr) minmax(290px,.85fr);gap:12px;align-items:stretch}
-  .cgrid:not(.nomap) .mapwrap{grid-column:auto;order:0;display:flex;flex-direction:column}
-  .cgrid:not(.nomap) .mapwrap .mapframe{flex:1;height:auto;min-height:380px}
-  .cgrid .maphd .hint{display:none}
-  .cgrid:not(.nomap) .row{grid-template-columns:12px minmax(64px,1fr) minmax(92px,1.15fr) 36px 16px;gap:5px}
-  .cgrid:not(.nomap) .row .mk{width:36px}
-  .cgrid:not(.nomap) input.sech{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* the strategy map runs the full width of the card; tanks & jobs and healers sit underneath it */
+.cgrid:not(.nomap) .mapwrap .mapframe{height:auto;aspect-ratio:3/2;max-height:calc(100vh - 200px);min-height:260px}
+@container (min-width:760px){
+  .cgrid:not(.nomap){grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start}
 }
 @container (max-width:600px){ .cgrid{grid-template-columns:1fr} }
 .mapwrap{margin-top:14px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#0a090c}
@@ -278,7 +283,7 @@ body.viewonly :is(input,select,textarea):disabled{opacity:1;color:var(--text);cu
 <div class="vobanner" id="vobanner">👁 View only. You can look around and copy assignments, but changes are turned off on this link.</div>
 <div class="wrap">
   <aside id="bench">
-    <div class="rhead"><h3>Roster</h3><span class="cnt" id="rcount"></span><button class="btn small" id="b-addtoggle" type="button">+ Add</button></div>
+    <div class="rhead"><h3>Roster</h3><span class="cnt" id="rcount"></span><button class="btn small" id="b-addtoggle" type="button">+ Add</button><button class="btn small ghost" id="b-fold" type="button" title="Hide the roster to give the maps more room">◂</button></div>
     <p class="hint edhint">Drag a name onto a slot, or tap it then tap a slot. Drag back here to clear. Double-click a name for their page.</p>
     <form class="addform" id="addform" autocomplete="off" hidden>
       <input id="add-n" placeholder="New member name" maxlength="24">
@@ -570,7 +575,12 @@ async function load(){
 // Bump when board.html is rebuilt from a newer map builder; older saved map edits are then dropped.
 const BOARD_VER='1793215686';
 // changes the map frames' address on each release so browsers don't keep an old cached board.html
-const BUILD='20261030b';
+const BUILD='20261104a';
+function setFold(on){
+  document.body.classList.toggle('rfold',on);
+  const b=document.getElementById('b-fold'); if (b){ b.textContent=on?'Roster ▸':'◂'; b.title=on?'Show the roster':'Hide the roster to give the maps more room'; }
+  try { localStorage.setItem('ashen-rfold',on?'1':''); } catch(e){}
+}
 function loadMapAssets(){ try { S.bassets=JSON.parse(localStorage.getItem(STORE+'-maps')||'{}')||{}; } catch(e){ S.bassets={}; }  if (S.oldBoard){ S.bassets={}; try { localStorage.removeItem(STORE+'-maps'); } catch(e){} } }
 async function share(view){
   const code = LIVE.id ? '' : await encodeState();
@@ -750,7 +760,7 @@ function hiddenList(){
 function mapHTML(raid,bi,name){
   return `<div class="mapwrap"><div class="maphd"><span>Strategy map</span><span class="hint" style="margin:0;flex:1">Drag to pan · Ctrl + scroll to zoom</span>
     <button class="btn small primary" data-editmap="${esc(name)}">✎ Edit map</button><button class="btn small" data-tab="maps">Full board</button></div>
-    <iframe class="mapframe" loading="lazy" title="${esc(name)} map" data-boss="${esc(name)}" src="board.html?v=${BUILD}&boss=${encodeURIComponent(name)}${raid==='BWL'?'&zoom=1.25':''}"></iframe></div>`;
+    <iframe class="mapframe" loading="lazy" title="${esc(name)} map" data-boss="${esc(name)}" src="board.html?v=${BUILD}&boss=${encodeURIComponent(name)}"></iframe></div>`;
 }
 function renderMaps(){
   return `<div class="fullmap"><iframe id="fullmap" class="mapframe" title="Strategy maps" src="board.html?v=${BUILD}&full=1${VIEW?'&ro=1':''}"></iframe></div>`;
@@ -1173,6 +1183,7 @@ document.addEventListener('click',e=>{
   const sh=el.closest('[data-share]'); if (sh){ closeMenu(); share(sh.dataset.share==='view'); return; }
   if (el.closest('#b-share')){ shareMenu(el.closest('#b-share')); return; }
   if (el.closest('#b-reset')){ if (confirm(LIVE.id?'Reset the live plan to the starting roster and assignments? This changes it for everyone.':'Reset everything to the starting roster and assignments? Your current plan in this browser will be replaced.')){ S=defaults(); if (!LIVE.id) history.replaceState(null,'',location.pathname); commit(); mapFrames().forEach(f=>sendLoad(f.contentWindow)); toast('Reset to the starting plan.'); } return; }
+  if (el.closest('#b-fold')){ setFold(!document.body.classList.contains('rfold')); return; }
   if (el.closest('#b-addtoggle')){ const f=document.getElementById('addform'); f.hidden=!f.hidden; if (!f.hidden) document.getElementById('add-n').focus(); return; }
   if (el.closest('#selcancel')){ UI.sel=null; render(); return; }
   // tap-to-place: a name is selected and an empty slot (or the roster panel) is tapped
@@ -1257,6 +1268,7 @@ window.addEventListener('message',e=>{
 document.addEventListener('toggle',e=>{ const d=e.target; if (d.dataset&&d.dataset.mech){ d.open?UI.mech.add(d.dataset.mech):UI.mech.delete(d.dataset.mech); } },true);
 window.addEventListener('hashchange',async()=>{ await load(); render(); });
 
+try { if (localStorage.getItem('ashen-rfold')==='1') setFold(true); } catch(e){}
 load().then(render);
 </script>
 </body>

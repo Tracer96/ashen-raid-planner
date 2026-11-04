@@ -20,6 +20,9 @@ Drag-and-drop raid assignments for Blackwing Lair and AQ40: tanks, healers, raid
 - **Pull marks** (on Tanks, healers & marks) sets a tank, a puller and a CC (sheep, trap, hibernate…) for each mark.
 - **Player** shows everything one person is assigned. Double-click a name to open it, and "Copy link" sends them a link straight to their page.
 - Every boss card has its **strategy map** (the Ashen Banner board). Drag to pan, Ctrl + scroll to zoom, and use the arrows for phases. **✎ Edit map** opens the full map editor; **Done** brings you back. Bosses without a map get a **+ Build a map** button.
+- The map runs the full width of each boss card, with tanks and healers underneath. **◂** at the top of the roster folds it away for even more room (**Roster ▸** brings it back).
+- **Steps** animate a fight. In the map editor, **+ Add step** (top of the map) adds a step: drag tokens to where they go next, and they glide there when you press **▶ Play**. Each step can have a caption, a move time and a pause. Select something and use **Hide from this step on** to make it disappear, or add something new on a later step and it appears there. Raiders get **‹ ›** and **▶ Play** on every boss card (Space plays, `,` and `.` step).
+- **Spell effects** (left panel of the editor) are animated: Fireball, Frostbolt, Shadow Bolt, Lightning, Charge and Beam fly from the start dot to the end dot; Fear, Explosion, Fire, Poison, Frost nova, Heal, Knockback, Stun, Shadow zone and Pulse play where you drop them. Cones and zones also have a **Pulse** option.
 - **Strategy maps** shows the whole board with every encounter.
 - Map edits save into the raid plan and travel in the share link (images you upload onto a map stay in your browser).
 - **Copy text** on a boss gives a one-paste summary for raid chat or Discord (`{skull}` shows as the icon in WoW chat).
