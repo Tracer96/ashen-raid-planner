@@ -575,7 +575,7 @@ async function load(){
 // Bump when board.html is rebuilt from a newer map builder; older saved map edits are then dropped.
 const BOARD_VER='1793215686';
 // changes the map frames' address on each release so browsers don't keep an old cached board.html
-const BUILD='20261104c';
+const BUILD='20261104d';
 function setFold(on){
   document.body.classList.toggle('rfold',on);
   const b=document.getElementById('b-fold'); if (b){ b.textContent=on?'Roster ▸':'◂'; b.title=on?'Show the roster':'Hide the roster to give the maps more room'; }
