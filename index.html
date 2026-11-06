@@ -262,6 +262,50 @@ body.viewonly .chip{cursor:default}
 body.viewonly .edhint{display:none}
 body.viewonly :is(input,select,textarea):disabled{opacity:1;color:var(--text);cursor:default}
 .ctx .sub{display:block;color:var(--muted);font-size:11.5px;margin-top:2px}
+
+/* talking strats */
+.ts{margin:0 0 10px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:#14171d}
+.tsh{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.tsh span{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-right:auto}
+.ts .hint{margin:0}
+.linkbtn{background:none;border:0;color:var(--gold);text-decoration:underline;cursor:pointer;font:inherit;padding:0}
+.tsprev{white-space:pre-wrap;line-height:1.55;font-size:14px;color:var(--text)}
+.tsprev.big{font-size:17px;line-height:1.6}
+.tsn{font-weight:700}
+.tsicon{font-weight:700}
+.tsmiss{color:#ffb36b;background:#3a2214;border:1px dashed #ffb36b77;border-radius:4px;padding:0 4px}
+#tsov{position:fixed;inset:0;z-index:320;background:#000b;display:flex;align-items:center;justify-content:center;padding:16px}
+.tsbox{width:min(1280px,100%);height:min(860px,100%);display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 20px 60px #000c;overflow:hidden}
+.tshd{display:flex;align-items:center;gap:6px;padding:12px 14px;border-bottom:1px solid var(--line)}
+.tshd h3{margin:0 auto 0 0;font-family:Cinzel,Georgia,serif;color:var(--gold);font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tshd h3 span{color:var(--text);font-family:inherit}
+.tsbody{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr)}
+.tsbody.ro{grid-template-columns:1fr}
+.tsed{display:flex;flex-direction:column;gap:10px;padding:12px 14px;min-height:0;overflow:auto;border-right:1px solid var(--line)}
+.tstags{display:flex;flex-direction:column;gap:8px}
+.tsgrp h4,.tsused h4,.tsread h4{margin:0 0 5px;font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.tsgrp h4 small{text-transform:none;letter-spacing:0;font-weight:400;margin-left:4px}
+.tschip{display:inline-flex;align-items:center;gap:5px;margin:0 4px 4px 0;padding:3px 8px;border-radius:999px;border:1px solid #3a4250;background:#1c212a;color:var(--text);font-size:12.5px;cursor:pointer}
+.tschip:hover{border-color:var(--gold)}
+.tschip i{font-style:normal;color:var(--muted);font-size:11.5px}
+.tschip.tsmk{padding:3px 8px;width:auto;height:auto}
+.tsnew{display:inline-flex;gap:4px;align-items:center;margin-top:2px}
+.tsnew input{width:180px;padding:4px 8px}
+#tstext{flex:1;min-height:220px;resize:vertical;font-size:15px;line-height:1.55;padding:10px 12px}
+#tsov textarea,#tsov input,#tsov select{background:#0f1217;color:var(--text);border:1px solid #333b48;border-radius:7px;font:inherit}
+#tsov textarea:focus,#tsov input:focus,#tsov select:focus{outline:none;border-color:var(--gold)}
+#tsov textarea::placeholder,#tsov input::placeholder{color:#6b7280}
+#tsov #tstext{font-size:15px}
+#tsov select{padding:4px 6px;height:30px}
+.tsused{display:flex;flex-direction:column;gap:4px}
+.tsrow{display:grid;grid-template-columns:minmax(120px,auto) minmax(0,1fr) auto;gap:8px;align-items:center;font-size:13px}
+.tsrow span{font-weight:600}
+.tsrow em{font-style:normal;color:var(--text)}
+.tsrow small{color:var(--muted)}
+.tsrow.miss em{color:#ffb36b}
+.tsrow select{min-width:0}
+.tsread{padding:14px 18px;overflow:auto;min-height:0}
+@media (max-width:860px){.tsbody{grid-template-columns:1fr}.tsed{border-right:0;border-bottom:1px solid var(--line)}.tsbox{height:100%}}
 </style>
 </head>
 <body>
@@ -373,7 +417,7 @@ function defaults(){
     roster: DATA.roster.map(r=>({n:r[0],c:r[1],r:r[2],st:r[3],out:!!r[4],x:[]})),
     L:{BWL:defLineup(), AQ40:defLineup()},
     groups: DATA.groups.map(g=>g.slice()),
-    a:{}, m:{}, notes:{}, lb:{}, cx:{}, hide:{}, cn:0, ord:{}, st:{}, ro:{}, eb:{BWL:[]}, board:null, bassets:{}, tabs:{order:[],hidden:[]}
+    a:{}, m:{}, notes:{}, lb:{}, cx:{}, hide:{}, cn:0, ord:{}, st:{}, ts:{}, tv:0, ro:{}, eb:{BWL:[]}, board:null, bassets:{}, tabs:{order:[],hidden:[]}
   };
 }
 
@@ -488,7 +532,7 @@ function place(name, from, to){
 function packState(){
   return {v:1,d:S.date,l:S.lead,
     r:S.roster.map(p=>p.x&&p.x.length?[p.n,p.c,p.r,p.st,p.out?1:0,p.x]:[p.n,p.c,p.r,p.st,p.out?1:0]),
-    L:S.L,g:S.groups,a:S.a,m:S.m,n:S.notes,b:S.lb,x:S.cx,h:S.hide,cn:S.cn,o:S.ord,t:S.st,ro:S.ro,tb:S.tabs,eb:S.eb,bd:S.board,bv:BOARD_VER};
+    L:S.L,g:S.groups,a:S.a,m:S.m,n:S.notes,b:S.lb,x:S.cx,h:S.hide,cn:S.cn,o:S.ord,t:S.st,ro:S.ro,tb:S.tabs,eb:S.eb,bd:S.board,bv:BOARD_VER,ts:S.ts,tv:S.tv};
 }
 function unpackState(o){
   const s=defaults();
@@ -502,7 +546,7 @@ function unpackState(o){
     if (o.k){ L.mk={}; for (const k in o.k) if (o.k[k]) L.mk[k]=o.k[k]; }
     if (o.w) L.mkw={...o.w}; });
   if (Array.isArray(o.g)&&o.g.length===8) s.groups=o.g.map(g=>{g=(g||[]).slice(0,5); while(g.length<5) g.push(''); return g;});
-  s.a=o.a||{}; s.m=o.m||{}; s.n=undefined; s.notes=o.n||{}; s.lb=o.b||{}; s.cx=o.x||{}; s.hide=o.h||{}; s.cn=o.cn||0; s.ord=o.o||{}; s.st=o.t||{}; s.ro=o.ro||{}; s.board=(Array.isArray(o.bd)&&o.bv===BOARD_VER)?o.bd:null; s.oldBoard=!!o.bd&&!s.board; if (o.tb&&Array.isArray(o.tb.order)) s.tabs={order:o.tb.order,hidden:o.tb.hidden||[]};
+  s.a=o.a||{}; s.m=o.m||{}; s.n=undefined; s.notes=o.n||{}; s.lb=o.b||{}; s.cx=o.x||{}; s.hide=o.h||{}; s.cn=o.cn||0; s.ord=o.o||{}; s.st=o.t||{}; s.ts=(o.ts&&typeof o.ts==='object')?o.ts:{}; s.tv=o.tv||0; s.ro=o.ro||{}; s.board=(Array.isArray(o.bd)&&o.bv===BOARD_VER)?o.bd:null; s.oldBoard=!!o.bd&&!s.board; if (o.tb&&Array.isArray(o.tb.order)) s.tabs={order:o.tb.order,hidden:o.tb.hidden||[]};
   return s;
 }
 const b64u = {
@@ -575,7 +619,7 @@ async function load(){
 // Bump when board.html is rebuilt from a newer map builder; older saved map edits are then dropped.
 const BOARD_VER='1793215686';
 // changes the map frames' address on each release so browsers don't keep an old cached board.html
-const BUILD='20261104d';
+const BUILD='20261105a';
 function setFold(on){
   document.body.classList.toggle('rfold',on);
   const b=document.getElementById('b-fold'); if (b){ b.textContent=on?'Roster ▸':'◂'; b.title=on?'Show the roster':'Hide the roster to give the maps more room'; }
@@ -802,7 +846,7 @@ function renderRaid(raid){
         ${Object.keys(S.hide).some(k=>k.startsWith(raid+'.'+bi+'.'))?`<button class="btn small ghost" data-restore="${raid}.${bi}">Restore rows</button>`:''}
         <button class="btn small ghost" data-clearboss="${raid}|${bi}" title="Clear this boss back to defaults">Clear</button>${b.extra?`<button class="btn small ghost" data-rmboss="${raid}|${bi}" title="Remove this boss card">Remove</button>`:''}</div>
       <div class="bd"><div class="csit">${sitHTML}</div><div class="cgrid${raid==='BUFF'?' nomap':''}"><div class="cl">${L.map(secHTML).join('')}</div>${raid==='BUFF'?'':mapHTML(raid,bi,b.name)}<div class="cr">${Rt.map(secHTML).join('')}</div></div>
-        <div class="cbot">${raid==='BUFF'?notes:`<details class="mech" data-mech="${sid}"${UI.editStrat===sid||UI.mech.has(sid)?' open':''}><summary>Mechanics notes</summary>${notes}</details>`}
+        <div class="cbot">${raid==='BUFF'?notes:`${tsCard(raid,bi)}<details class="mech" data-mech="${sid}"${UI.editStrat===sid||UI.mech.has(sid)?' open':''}><summary>Mechanics notes</summary>${notes}</details>`}
         <textarea class="free" data-note="${raid}.${bi}" placeholder="${raid==='BUFF'?'Notes for this week…':'Notes for this week (breaths, kill order, positions…)'}">${esc(S.notes[raid+'.'+bi]||'')}</textarea></div></div>
     </section>`;
   });
@@ -1268,8 +1312,177 @@ window.addEventListener('message',e=>{
 document.addEventListener('toggle',e=>{ const d=e.target; if (d.dataset&&d.dataset.mech){ d.open?UI.mech.add(d.dataset.mech):UI.mech.delete(d.dataset.mech); } },true);
 window.addEventListener('hashchange',async()=>{ await load(); render(); });
 
+/* ---------- talking strats: what you say on the pull, with names filled in from the lineup ---------- */
+// Write {MT}, {MT Healers}, {Time Lapse Tank}… and each tag shows the player(s) assigned to it:
+// first a row on this boss card with that name, then a role on Tanks, healers & marks, then a group.
+const tnorm = s => String(s||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+const TS_ICONS = {star:'★',circle:'●',diamond:'◆',triangle:'▲',moon:'☾',square:'■',cross:'✖',x:'✖',skull:'☠',rt1:'★',rt2:'●',rt3:'◆',rt4:'▲',rt5:'☾',rt6:'■',rt7:'✖',rt8:'☠'};
+const TS_GROUPS = [
+  {tag:'Tanks', re:/^(MT|OT\d+)$/, alias:['tanks','alltanks']},
+  {tag:'MT Healers', re:/^MTH\d+$/, alias:['mthealers','mtheals','mthealer','tankhealers']},
+  {tag:'Raid Healers', re:/^RH\d+$/, alias:['raidhealers','raidheals','raidhealer']},
+  {tag:'Healers', re:/^(MTH\d+|OT\d+H|RH\d+)$/, alias:['healers','allhealers']},
+];
+const TS_TANKN = {tank1:'MT', tank2:'OT1', tank3:'OT2', tank4:'OT3'};
+const tsText = (raid,bi) => (S.ts||{})[raid+'.'+bi] || '';
+function joinNames(a){ a=a.filter(Boolean); return a.length<2 ? (a[0]||'') : a.slice(0,-1).join(', ')+' and '+a[a.length-1]; }
+function tsResolve(raid,bi,tag){
+  const t=tnorm(tag); if (!t) return null;
+  if (TS_ICONS[t]) return {kind:'icon', icon:TS_ICONS[t]};
+  const slots=bossSecs(raid,bi).flatMap(sec=>sec.slots).filter(({sl,key})=>tnorm(slotLabel(key,sl))===t);
+  if (slots.length) return {kind:'slot', items:slots.map(({sl,key})=>({key, n:slotValue(key,sl).n}))};
+  const L=lineup(raid);
+  const row = L.rows.find(([k,l])=>tnorm(l)===t) || L.rows.find(([k])=>tnorm(k)===t) || (TS_TANKN[t] && L.rows.find(([k])=>k===TS_TANKN[t]));
+  if (row) return {kind:'core', items:[{k:row[0], n:L.core[row[0]]||''}]};
+  const g=TS_GROUPS.find(g=>g.alias.includes(t));
+  if (g) return {kind:'group', items:L.rows.filter(([k])=>g.re.test(k)).map(([k])=>({k, n:L.core[k]||''}))};
+  return {kind:'none'};
+}
+const nameSpan = n => { const p=S.roster.find(x=>x.n===n); return `<b class="tsn" style="color:${p?CLASSES[p.c]||'#fff':'#fff'}">${esc(n)}</b>`; };
+function tsHTML(raid,bi,text){
+  return esc(text).replace(/\{([^{}\n]{1,40})\}/g,(m,tag)=>{
+    const r=tsResolve(raid,bi,tag.replace(/&amp;/g,'&').replace(/&#39;/g,"'"));
+    if (!r || r.kind==='none') return `<span class="tsmiss" title="No role or row called “${tag}” yet. Add it in the pop-out.">${tag}?</span>`;
+    if (r.kind==='icon') return `<span class="tsicon">${r.icon}</span>`;
+    const ns=r.items.map(i=>i.n).filter(Boolean);
+    if (!ns.length) return `<span class="tsmiss" title="Nobody assigned to ${tag} yet">${tag}: nobody</span>`;
+    return ns.length<2 ? nameSpan(ns[0]) : ns.slice(0,-1).map(nameSpan).join(', ')+' and '+nameSpan(ns[ns.length-1]);
+  });
+}
+function tsPlain(raid,bi,text){
+  return text.replace(/\{([^{}\n]{1,40})\}/g,(m,tag)=>{
+    const r=tsResolve(raid,bi,tag);
+    if (!r || r.kind==='none') return '['+tag+']';
+    if (r.kind==='icon') return m;              // {skull} etc. become raid icons in WoW chat
+    return joinNames(r.items.map(i=>i.n)) || '['+tag+']';
+  });
+}
+function tsCard(raid,bi){
+  const sid=raid+'.'+bi, text=tsText(raid,bi);
+  return `<div class="ts"><div class="tsh"><span>Talking strats</span>
+      <button class="btn small" data-tsopen="${raid}|${bi}" title="Open a big editor with tags you can click to insert">⤢ Pop out</button>
+      ${text?`<button class="btn small ghost" data-tscopy="${raid}|${bi}" title="Copy with the names filled in, for raid chat or Discord">Copy</button>`:''}</div>
+    ${text?`<div class="tsprev">${tsHTML(raid,bi,text)}</div>`
+      :`<p class="hint">What you'll say on the pull. Type tags like {MT} or {Time Lapse Tank} and the names fill in from your lineup. <button class="linkbtn" data-tsopen="${raid}|${bi}">Start writing</button></p>`}</div>`;
+}
+async function tsCopy(raid,bi){
+  const txt=DATA[raid][bi].name+'\n'+tsPlain(raid,bi,tsText(raid,bi));
+  try { await navigator.clipboard.writeText(txt); toast('Copied with names filled in'); } catch(e){ toast('Copy didn’t work here: select the text and copy it'); }
+}
+
+/* ---- the pop-out ---- */
+let TS=null; // {raid, bi}
+function tsOpen(raid,bi){ TS={raid,bi}; tsRenderModal(true); }
+function tsClose(){ const d=document.getElementById('tsov'); if (d) d.remove(); document.body.classList.remove('ovopen'); TS=null; render(); }
+function tsUsedTags(text){ const seen=new Map(); for (const m of text.matchAll(/\{([^{}\n]{1,40})\}/g)){ const k=tnorm(m[1]); if (k && !TS_ICONS[k] && !seen.has(k)) seen.set(k,m[1]); } return [...seen.values()]; }
+function tsPick(attrs, cur){
+  const names=S.roster.filter(p=>!p.out).map(p=>p.n).sort((a,b)=>a.localeCompare(b));
+  if (cur && !names.includes(cur)) names.unshift(cur);
+  return `<select ${attrs}><option value="">— nobody —</option>${names.map(n=>`<option${n===cur?' selected':''}>${esc(n)}</option>`).join('')}</select>`;
+}
+function tsParts(){
+  const {raid,bi}=TS, L=lineup(raid), text=tsText(raid,bi);
+  const chip=(tag,who,title)=>`<button class="tschip" data-tsins="${esc(tag)}" title="${esc(title||('Insert {'+tag+'}'))}">{${esc(tag)}}${who?`<i>${esc(who)}</i>`:''}</button>`;
+  const lineupChips=L.rows.map(([k,l])=>chip(l, L.core[k]||'', `Insert {${l}} (${L.core[k]||'nobody yet'})`)).join('');
+  const groupChips=TS_GROUPS.map(g=>chip(g.tag, L.rows.filter(([k])=>g.re.test(k)).map(([k])=>L.core[k]).filter(Boolean).join(', '))).join('');
+  const lrows=new Set(L.rows.map(([k,l])=>tnorm(l)));
+  const bossLabels=[...new Map(bossSecs(raid,bi).flatMap(sec=>sec.slots).map(({sl,key})=>[tnorm(slotLabel(key,sl)),slotLabel(key,sl)])).values()].filter(l=>l&&!lrows.has(tnorm(l)));
+  const bossChips=bossLabels.map(l=>{ const r=tsResolve(raid,bi,l); return chip(l, r&&r.items?r.items.map(i=>i.n).filter(Boolean).join(', '):''); }).join('');
+  const markChips=['skull','cross','square','moon','triangle','diamond','circle','star'].map(m=>`<button class="tschip tsmk" data-tsins="${m}" title="Raid mark: shows as the icon in WoW chat">${TS_ICONS[m]} {${m}}</button>`).join('');
+  const tags=`<div class="tsgrp"><h4>Lineup roles <small>raid-wide · also on Tanks, healers &amp; marks</small></h4>${lineupChips}
+      <span class="tsnew"><input id="tsnewtag" placeholder="New role, e.g. Hibernate 3" maxlength="40"><button class="btn small" data-tsadd>+ Add</button></span></div>
+    <div class="tsgrp"><h4>Groups</h4>${groupChips}</div>
+    ${bossChips?`<div class="tsgrp"><h4>Rows on this boss</h4>${bossChips}</div>`:''}
+    <div class="tsgrp"><h4>Raid marks</h4>${markChips}</div>`;
+  const used=tsUsedTags(text).map(tag=>{
+    const r=tsResolve(raid,bi,tag);
+    if (r.kind==='none') return `<div class="tsrow miss"><span>{${esc(tag)}}</span><em>Not a role yet</em><button class="btn small" data-tsmk="${esc(tag)}">Make it a role</button></div>`;
+    if (r.kind==='group') return `<div class="tsrow"><span>{${esc(tag)}}</span><em>${esc(joinNames(r.items.map(i=>i.n))||'nobody yet')}</em><small>from the lineup</small></div>`;
+    if (r.items.length>1) return `<div class="tsrow"><span>{${esc(tag)}}</span><em>${esc(joinNames(r.items.map(i=>i.n))||'nobody yet')}</em><small>${r.items.length} rows on this boss</small></div>`;
+    const it=r.items[0], attrs=r.kind==='core'?`data-tsset="core|${esc(it.k)}"`:`data-tsset="slot|${esc(it.key)}"`;
+    return `<div class="tsrow"><span>{${esc(tag)}}</span>${VIEW?`<em>${esc(it.n||'nobody yet')}</em>`:tsPick(attrs,it.n)}<small>${r.kind==='core'?'raid-wide role':'this boss only'}</small></div>`;
+  }).join('');
+  return { tags, used: used?`<h4>Who's in this strat</h4>${used}`:'', read: text?tsHTML(raid,bi,text):'<p class="hint">Nothing written yet.</p>' };
+}
+function tsRefresh(){ // everything except the text box, so typing and undo are never interrupted
+  const d=document.getElementById('tsov'); if (!d||!TS) return;
+  const p=tsParts(), set=(id,h)=>{ const x=document.getElementById(id); if (x && x.innerHTML!==h) x.innerHTML=h; };
+  const f=document.activeElement, keepNew=f&&f.id==='tsnewtag'?f.value:null;
+  set('tsTags',p.tags); set('tsUsed',p.used); set('tsRead',p.read);
+  if (keepNew!=null){ const i=document.getElementById('tsnewtag'); i.value=keepNew; i.focus(); }
+}
+function tsRenderModal(first){
+  if (!TS) return;
+  const {raid,bi}=TS, text=tsText(raid,bi), b=DATA[raid][bi];
+  let d=document.getElementById('tsov');
+  if (!d){ d=document.createElement('div'); d.id='tsov'; document.body.appendChild(d); document.body.classList.add('ovopen'); }
+  d.innerHTML = `<div class="tsbox" role="dialog" aria-label="Talking strats">
+    <div class="tshd"><h3>Talking strats <span>· ${esc(b.name)}</span></h3>
+      <button class="btn small" data-tsprevboss title="Previous boss">‹</button><button class="btn small" data-tsnextboss title="Next boss">›</button>
+      <button class="btn small primary" data-tscopy="${raid}|${bi}">Copy with names</button><button class="btn small ghost" data-tsclose title="Close (Esc)">✕</button></div>
+    <div class="tsbody${VIEW?' ro':''}">
+      ${VIEW?'':`<div class="tsed"><div class="tstags" id="tsTags"></div>
+        <textarea id="tstext" spellcheck="true" placeholder="Write it the way you'll say it, e.g.&#10;{MT} tanks him facing the wall, {OT1} picks him up on Time Lapse.&#10;{MT Healers} on {MT}. {Raid Healers} keep the raid up.&#10;{Hibernate 1} and {Hibernate 2}: sleep the whelps on {moon}.">${esc(text)}</textarea>
+        <div class="tsused" id="tsUsed"></div></div>`}
+      <div class="tsread"><h4>${VIEW?'':'How it reads'}</h4><div class="tsprev big" id="tsRead"></div></div>
+    </div></div>`;
+  tsRefresh();
+  const ta=d.querySelector('textarea'); if (ta && first){ ta.focus(); ta.setSelectionRange(ta.value.length,ta.value.length); }
+}
+function tsInsert(tag){
+  const ta=document.getElementById('tstext'); if (!ta||!TS) return;
+  const ins='{'+tag+'}'; ta.focus();
+  let ok=false; try { ok=document.execCommand('insertText', false, ins); } catch(e){}
+  if (!ok){ const s=ta.selectionStart??ta.value.length, e=ta.selectionEnd??s; ta.value=ta.value.slice(0,s)+ins+ta.value.slice(e); ta.setSelectionRange(s+ins.length,s+ins.length); }
+  tsSave(ta.value, true);
+}
+let tsT=0;
+function tsSave(v, now){
+  if (!TS) return; S.ts=S.ts||{}; const k=TS.raid+'.'+TS.bi;
+  if (v.trim()) S.ts[k]=v; else delete S.ts[k];
+  clearTimeout(saveTimer); saveTimer=setTimeout(saveLocal,400);
+  clearTimeout(tsT); if (now) tsRefresh(); else tsT=setTimeout(tsRefresh,300);
+}
+function tsAddRole(label){
+  label=String(label||'').trim().slice(0,40); if (!label||!TS) return;
+  const L=lineup(TS.raid);
+  if (!L.rows.some(([k,l])=>tnorm(l)===tnorm(label))){ L.rows.push(['c'+(++S.cn), label]); saveLocal(); toast(`Added “${label}” to the ${TS.raid} lineup. Pick who does it below.`); }
+  tsRefresh();
+}
+document.addEventListener('click',e=>{
+  const el=e.target; if (!el.closest) return;
+  const o=el.closest('[data-tsopen]'); if (o){ const [r,b]=o.dataset.tsopen.split('|'); tsOpen(r,+b); return; }
+  const c=el.closest('[data-tscopy]'); if (c){ const [r,b]=c.dataset.tscopy.split('|'); tsCopy(r,+b); return; }
+  if (!TS) return;
+  if (el.id==='tsov' || el.closest('[data-tsclose]')){ tsClose(); return; }
+  const ins=el.closest('[data-tsins]'); if (ins){ tsInsert(ins.dataset.tsins); return; }
+  if (el.closest('[data-tsadd]')){ const i=document.getElementById('tsnewtag'); if (i&&i.value.trim()){ const v=i.value.trim(); i.value=''; tsAddRole(v); tsInsert(v); } return; }
+  const mk=el.closest('[data-tsmk]'); if (mk){ tsAddRole(mk.dataset.tsmk); return; }
+  const nb=el.closest('[data-tsnextboss],[data-tsprevboss]'); if (nb){ const ord=bossOrder(TS.raid), i=ord.indexOf(TS.bi), d=nb.hasAttribute('data-tsnextboss')?1:-1; TS.bi=ord[(i+d+ord.length)%ord.length]; tsRenderModal(true); return; }
+});
+document.addEventListener('input',e=>{ if (e.target.id==='tstext') tsSave(e.target.value); });
+document.addEventListener('change',e=>{
+  const s=e.target.closest&&e.target.closest('[data-tsset]'); if (!s||!TS) return;
+  const [kind,k]=s.dataset.tsset.split('|'), n=s.value;
+  if (kind==='core'){ lineup(TS.raid).core[k]=n; }
+  else { if (n) S.a[k]=n; else S.a[k]=''; }
+  saveLocal(); tsRefresh(); toast(n?`${n} filled in`:'Cleared');
+});
+document.addEventListener('keydown',e=>{
+  if (!TS) return;
+  if (e.key==='Escape'){ e.preventDefault(); tsClose(); }
+  if (e.target.id==='tsnewtag' && e.key==='Enter'){ e.preventDefault(); const v=e.target.value.trim(); if (v){ e.target.value=''; tsAddRole(v); tsInsert(v); } }
+});
+// the roles the raid leader asked for, added once to plans made before talking strats existed
+function tsMigrate(){
+  if (S.tv) return; S.tv=1;
+  const L=lineup('BWL');
+  ['Techy Healer','Time Lapse Tank','Hibernate 1','Hibernate 2'].forEach(l=>{ if (!L.rows.some(([k,x])=>tnorm(x)===tnorm(l))) L.rows.push(['c'+(++S.cn), l]); });
+  if (!VIEW) saveLocal();
+}
+
 try { if (localStorage.getItem('ashen-rfold')==='1') setFold(true); } catch(e){}
-load().then(render);
+load().then(()=>{ tsMigrate(); render(); });
 </script>
 </body>
 </html>
