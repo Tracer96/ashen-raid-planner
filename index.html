@@ -621,7 +621,7 @@ async function load(){
 // Bump when board.html is rebuilt from a newer map builder; older saved map edits are then dropped.
 const BOARD_VER='1793215686';
 // changes the map frames' address on each release so browsers don't keep an old cached board.html
-const BUILD='20261105b';
+const BUILD='20261106a';
 function setFold(on){
   document.body.classList.toggle('rfold',on);
   const b=document.getElementById('b-fold'); if (b){ b.textContent=on?'Roster ▸':'◂'; b.title=on?'Show the roster':'Hide the roster to give the maps more room'; }
@@ -1426,6 +1426,8 @@ function tsRenderModal(first){
   d.innerHTML = `<div class="tsbox" role="dialog" aria-label="Talking strats">
     <div class="tshd"><h3>Talking strats <span>· ${esc(b.name)}</span></h3><em class="tspriv" title="Kept only in this browser. Not in share links, live plans or what raiders see.">🔒 Only you can see these</em>
       <button class="btn small" data-tsprevboss title="Previous boss">‹</button><button class="btn small" data-tsnextboss title="Next boss">›</button>
+      <button class="btn small" data-tsexport title="Save all your talking strats to a file (backup, or to move them to another computer)">Save to file</button>
+      <button class="btn small" data-tsimport title="Load talking strats from a file you saved">Load file</button>
       <button class="btn small primary" data-tscopy="${raid}|${bi}">Copy with names</button><button class="btn small ghost" data-tsclose title="Close (Esc)">✕</button></div>
     <div class="tsbody${VIEW?' ro':''}">
       ${VIEW?'':`<div class="tsed"><div class="tstags" id="tsTags"></div>
@@ -1450,6 +1452,30 @@ function tsSave(v, now){
   clearTimeout(tsSaveT); tsSaveT=setTimeout(tsStore,300);
   clearTimeout(tsT); if (now) tsRefresh(); else tsT=setTimeout(tsRefresh,300);
 }
+function tsExport(){
+  const n=Object.keys(TSP).length; if (!n){ toast('Nothing to save yet'); return; }
+  const data={type:'ashen-talking-strats', v:1, saved:new Date().toISOString(), strats:TSP};
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));
+  a.download='talking-strats-'+new Date().toISOString().slice(0,10)+'.json'; document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },1500);
+  toast(`Saved ${n} talking strat${n>1?'s':''} to your downloads`);
+}
+function tsImport(){
+  const inp=document.createElement('input'); inp.type='file'; inp.accept='.json,application/json';
+  inp.onchange=async()=>{
+    const f=inp.files[0]; if (!f) return;
+    let data; try { data=JSON.parse(await f.text()); } catch(e){ toast('That file isn’t a talking strats file'); return; }
+    const inc=data&&data.type==='ashen-talking-strats'&&data.strats&&typeof data.strats==='object'?data.strats:null;
+    if (!inc){ toast('That file isn’t a talking strats file'); return; }
+    const keys=Object.keys(inc).filter(k=>typeof inc[k]==='string'&&/^(BWL|AQ40)\.\d+$/.test(k));
+    const clash=keys.filter(k=>TSP[k]&&TSP[k]!==inc[k]);
+    const replace=!clash.length || confirm(`${clash.length} boss${clash.length>1?'es':''} already ha${clash.length>1?'ve':'s'} different talking strats here.\n\nOK: use the ones from the file\nCancel: keep yours and only add the missing ones`);
+    let added=0; for (const k of keys){ if (!TSP[k] || (replace && TSP[k]!==inc[k])){ TSP[k]=inc[k]; added++; } }
+    tsStore(); if (TS) tsRenderModal(); render();
+    toast(added?`Loaded ${added} talking strat${added>1?'s':''}`:'Nothing new in that file');
+  };
+  inp.click();
+}
 function tsAddRole(label){
   label=String(label||'').trim().slice(0,40); if (!label||!TS) return;
   const L=lineup(TS.raid);
@@ -1462,6 +1488,8 @@ document.addEventListener('click',e=>{
   const c=el.closest('[data-tscopy]'); if (c){ const [r,b]=c.dataset.tscopy.split('|'); tsCopy(r,+b); return; }
   if (!TS) return;
   if (el.id==='tsov' || el.closest('[data-tsclose]')){ tsClose(); return; }
+  if (el.closest('[data-tsexport]')){ tsExport(); return; }
+  if (el.closest('[data-tsimport]')){ tsImport(); return; }
   const ins=el.closest('[data-tsins]'); if (ins){ tsInsert(ins.dataset.tsins); return; }
   if (el.closest('[data-tsadd]')){ const i=document.getElementById('tsnewtag'); if (i&&i.value.trim()){ const v=i.value.trim(); i.value=''; tsAddRole(v); tsInsert(v); } return; }
   const mk=el.closest('[data-tsmk]'); if (mk){ tsAddRole(mk.dataset.tsmk); return; }
