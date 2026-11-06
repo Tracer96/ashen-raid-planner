@@ -266,7 +266,9 @@ body.viewonly :is(input,select,textarea):disabled{opacity:1;color:var(--text);cu
 /* talking strats */
 .ts{margin:0 0 10px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:#14171d}
 .tsh{display:flex;align-items:center;gap:6px;margin-bottom:6px}
-.tsh span{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-right:auto}
+.tsh span{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--gold);font-weight:700}
+.tspriv{font-style:normal;font-size:11.5px;color:var(--muted);margin-right:auto;margin-left:6px}
+.tshd .tspriv{margin:0 8px 0 0}
 .ts .hint{margin:0}
 .linkbtn{background:none;border:0;color:var(--gold);text-decoration:underline;cursor:pointer;font:inherit;padding:0}
 .tsprev{white-space:pre-wrap;line-height:1.55;font-size:14px;color:var(--text)}
@@ -532,7 +534,7 @@ function place(name, from, to){
 function packState(){
   return {v:1,d:S.date,l:S.lead,
     r:S.roster.map(p=>p.x&&p.x.length?[p.n,p.c,p.r,p.st,p.out?1:0,p.x]:[p.n,p.c,p.r,p.st,p.out?1:0]),
-    L:S.L,g:S.groups,a:S.a,m:S.m,n:S.notes,b:S.lb,x:S.cx,h:S.hide,cn:S.cn,o:S.ord,t:S.st,ro:S.ro,tb:S.tabs,eb:S.eb,bd:S.board,bv:BOARD_VER,ts:S.ts,tv:S.tv};
+    L:S.L,g:S.groups,a:S.a,m:S.m,n:S.notes,b:S.lb,x:S.cx,h:S.hide,cn:S.cn,o:S.ord,t:S.st,ro:S.ro,tb:S.tabs,eb:S.eb,bd:S.board,bv:BOARD_VER,tv:S.tv};
 }
 function unpackState(o){
   const s=defaults();
@@ -619,7 +621,7 @@ async function load(){
 // Bump when board.html is rebuilt from a newer map builder; older saved map edits are then dropped.
 const BOARD_VER='1793215686';
 // changes the map frames' address on each release so browsers don't keep an old cached board.html
-const BUILD='20261105a';
+const BUILD='20261105b';
 function setFold(on){
   document.body.classList.toggle('rfold',on);
   const b=document.getElementById('b-fold'); if (b){ b.textContent=on?'Roster ▸':'◂'; b.title=on?'Show the roster':'Hide the roster to give the maps more room'; }
@@ -1324,7 +1326,11 @@ const TS_GROUPS = [
   {tag:'Healers', re:/^(MTH\d+|OT\d+H|RH\d+)$/, alias:['healers','allhealers']},
 ];
 const TS_TANKN = {tank1:'MT', tank2:'OT1', tank3:'OT2', tank4:'OT3'};
-const tsText = (raid,bi) => (S.ts||{})[raid+'.'+bi] || '';
+// Talking strats are the raid leader's own notes: kept only in this browser, never in the plan, share links or live plans
+const TS_KEY = 'ashen-talking-strats';
+let TSP = (()=>{ try { return JSON.parse(localStorage.getItem(TS_KEY)||'{}')||{}; } catch(e){ return {}; } })();
+function tsStore(){ try { localStorage.setItem(TS_KEY, JSON.stringify(TSP)); } catch(e){ toast('Couldn’t save your talking strats in this browser'); } }
+const tsText = (raid,bi) => TSP[raid+'.'+bi] || '';
 function joinNames(a){ a=a.filter(Boolean); return a.length<2 ? (a[0]||'') : a.slice(0,-1).join(', ')+' and '+a[a.length-1]; }
 function tsResolve(raid,bi,tag){
   const t=tnorm(tag); if (!t) return null;
@@ -1358,8 +1364,9 @@ function tsPlain(raid,bi,text){
   });
 }
 function tsCard(raid,bi){
+  if (VIEW) return '';
   const sid=raid+'.'+bi, text=tsText(raid,bi);
-  return `<div class="ts"><div class="tsh"><span>Talking strats</span>
+  return `<div class="ts"><div class="tsh"><span>Talking strats</span><em class="tspriv" title="Kept only in this browser. Not in share links, live plans or what raiders see.">🔒 Only you can see this</em>
       <button class="btn small" data-tsopen="${raid}|${bi}" title="Open a big editor with tags you can click to insert">⤢ Pop out</button>
       ${text?`<button class="btn small ghost" data-tscopy="${raid}|${bi}" title="Copy with the names filled in, for raid chat or Discord">Copy</button>`:''}</div>
     ${text?`<div class="tsprev">${tsHTML(raid,bi,text)}</div>`
@@ -1372,7 +1379,7 @@ async function tsCopy(raid,bi){
 
 /* ---- the pop-out ---- */
 let TS=null; // {raid, bi}
-function tsOpen(raid,bi){ TS={raid,bi}; tsRenderModal(true); }
+function tsOpen(raid,bi){ if (VIEW) return; TS={raid,bi}; tsRenderModal(true); }
 function tsClose(){ const d=document.getElementById('tsov'); if (d) d.remove(); document.body.classList.remove('ovopen'); TS=null; render(); }
 function tsUsedTags(text){ const seen=new Map(); for (const m of text.matchAll(/\{([^{}\n]{1,40})\}/g)){ const k=tnorm(m[1]); if (k && !TS_ICONS[k] && !seen.has(k)) seen.set(k,m[1]); } return [...seen.values()]; }
 function tsPick(attrs, cur){
@@ -1417,7 +1424,7 @@ function tsRenderModal(first){
   let d=document.getElementById('tsov');
   if (!d){ d=document.createElement('div'); d.id='tsov'; document.body.appendChild(d); document.body.classList.add('ovopen'); }
   d.innerHTML = `<div class="tsbox" role="dialog" aria-label="Talking strats">
-    <div class="tshd"><h3>Talking strats <span>· ${esc(b.name)}</span></h3>
+    <div class="tshd"><h3>Talking strats <span>· ${esc(b.name)}</span></h3><em class="tspriv" title="Kept only in this browser. Not in share links, live plans or what raiders see.">🔒 Only you can see these</em>
       <button class="btn small" data-tsprevboss title="Previous boss">‹</button><button class="btn small" data-tsnextboss title="Next boss">›</button>
       <button class="btn small primary" data-tscopy="${raid}|${bi}">Copy with names</button><button class="btn small ghost" data-tsclose title="Close (Esc)">✕</button></div>
     <div class="tsbody${VIEW?' ro':''}">
@@ -1436,11 +1443,11 @@ function tsInsert(tag){
   if (!ok){ const s=ta.selectionStart??ta.value.length, e=ta.selectionEnd??s; ta.value=ta.value.slice(0,s)+ins+ta.value.slice(e); ta.setSelectionRange(s+ins.length,s+ins.length); }
   tsSave(ta.value, true);
 }
-let tsT=0;
+let tsT=0, tsSaveT=0;
 function tsSave(v, now){
-  if (!TS) return; S.ts=S.ts||{}; const k=TS.raid+'.'+TS.bi;
-  if (v.trim()) S.ts[k]=v; else delete S.ts[k];
-  clearTimeout(saveTimer); saveTimer=setTimeout(saveLocal,400);
+  if (!TS) return; const k=TS.raid+'.'+TS.bi;
+  if (v.trim()) TSP[k]=v; else delete TSP[k];
+  clearTimeout(tsSaveT); tsSaveT=setTimeout(tsStore,300);
   clearTimeout(tsT); if (now) tsRefresh(); else tsT=setTimeout(tsRefresh,300);
 }
 function tsAddRole(label){
@@ -1475,6 +1482,7 @@ document.addEventListener('keydown',e=>{
 });
 // the roles the raid leader asked for, added once to plans made before talking strats existed
 function tsMigrate(){
+  if (!VIEW && S.ts && Object.keys(S.ts).length){ for (const k in S.ts) if (!TSP[k]) TSP[k]=S.ts[k]; tsStore(); S.ts={}; saveLocal(); }
   if (S.tv) return; S.tv=1;
   const L=lineup('BWL');
   ['Techy Healer','Time Lapse Tank','Hibernate 1','Hibernate 2'].forEach(l=>{ if (!L.rows.some(([k,x])=>tnorm(x)===tnorm(l))) L.rows.push(['c'+(++S.cn), l]); });
