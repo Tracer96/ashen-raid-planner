@@ -2429,7 +2429,13 @@ function play(auto = true) {
   if (editingId) commitEditor();
   syncWork(); WORK = null; sel.clear();
   if (stepOf(pg) >= a.steps.length - 1) { STEP[pg.id] = 0; ENTER_T = performance.now(); }
-  PLAY = { pg, auto }; startLeg(); renderUI(); if (mode === 'edit') renderPanel();
+  PLAY = { pg, auto };
+  if (auto) { // ▶ Play shows the step you start on for its hold time before anything moves
+    const a2 = animOf(pg), from = stepOf(pg);
+    Object.assign(PLAY, { from, to: from, phase: 'hold', t0: performance.now(), dur: REDUCED ? 0 : Math.max(.2, a2.steps[from].hold ?? 1.5) * 1000 });
+    ENTER_T = performance.now(); renderBoardNow(); renderSteps(); kick();
+  } else startLeg();
+  renderUI(); if (mode === 'edit') renderPanel();
 }
 function startLeg() {
   const { pg } = PLAY, a = animOf(pg), from = stepOf(pg);
